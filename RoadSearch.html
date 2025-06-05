@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frontenac Road Search</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      padding: 2rem;
+      background-color: #f4f7fb;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #333;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    body.dark-mode {
+      background-color: #2a2a2a;
+      color: #e0e0e0;
+    }
+    h1 {
+      margin-bottom: 1.5rem;
+      font-size: 2rem;
+      font-weight: 600;
+      text-align: center;
+    }
+    body.dark-mode h1, body.dark-mode .form-label {
+        color: #e0e0e0;
+    }
+    .instructions {
+      margin-top: 1rem;
+      font-size: 1rem;
+      color: #555;
+      text-align: center;
+    }
+    body.dark-mode .instructions {
+        color: #bbb;
+    }
+    .result {
+      margin-top: 1rem;
+    }
+    .form-label {
+      font-weight: 500;
+    }
+    input.form-control:focus, select.form-select:focus {
+      border-color: #86b7fe;
+      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    .list-group-item-action:hover {
+      background-color: #e9ecef;
+    }
+    body.dark-mode .list-group-item {
+        background-color: #3a3a3a;
+        border-color: #444;
+        color: #e0e0e0;
+    }
+    body.dark-mode .list-group-item-action:hover {
+      background-color: #444;
+    }
+    .suggestions-container {
+      max-height: 250px;
+      overflow-y: auto;
+      padding-right: 10px; /* Space for scrollbar */
+      border: 1px solid #dee2e6;
+      border-radius: .25rem;
+    }
+    body.dark-mode .suggestions-container {
+        border-color: #444;
+    }
+    .suggestion {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+    }
+    .suggestion.selected {
+      background-color: #0d6efd; /* Bootstrap primary blue */
+      color: #fff;
+    }
+    body.dark-mode .suggestion.selected {
+      background-color: #0a58ca;
+      color: #fff;
+    }
+    footer {
+      margin-top: 4rem;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+    body.dark-mode footer {
+        color: #aaa;
+    }
+    .btn-toggle-darkmode {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+    }
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    /* Removed .loading-message styles as it's replaced by #loadingIndicatorGlobal */
+    body.dark-mode #loadingIndicatorGlobal { /* Ensure text is visible in dark mode */
+        color: #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <button id="darkModeToggle" class="btn btn-sm btn-outline-secondary btn-toggle-darkmode">Toggle Dark Mode</button>
+  <div class="container">
+    <div id="loadingIndicatorGlobal" class="text-center my-3" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p id="loadingTextGlobal" class="mt-2">Loading initial road data. Please wait...</p>
+    </div>
+
+    <h1>Frontenac Road Search</h1>
+    <div class="instructions">
+      <p>Select a municipality (optional), then start typing a road name. Press "Enter" to check or select a suggestion.</p>
+    </div>
+
+    <div class="row g-3 mb-3 align-items-end">
+      <div class="col-md-6">
+        <label for="municipalityFilter" class="form-label">Filter by Municipality:</label>
+        <select id="municipalityFilter" class="form-select">
+          <option value="">All Municipalities</option>
+          {/* Options populated by JavaScript */}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label for="roadSearch" class="form-label">Enter a road name:</label>
+        <input type="text" class="form-control" id="roadSearch" placeholder="Start typing...">
+      </div>
+    </div>
+    <div id="suggestions" class="mt-1 suggestions-container" style="display: none;"></div>
+
+    <div id="result" class="alert d-none mt-3" role="alert"></div>
+
+    <div id="similarResults" class="mt-3 d-none">
+      <h5>Similar road names:</h5>
+      <ul id="similarNames" class="list-group"></ul>
+    </div>
+
+    <div id="municipalityRoadsResult" class="mt-3 d-none">
+      <h5>Roads in <span id="selectedMunDisplay"></span>:</h5>
+      <div class="suggestions-container"> {/* Re-using for consistency, could be a different class if more distinction is needed */}
+          <ul id="municipalityRoadsList" class="list-group"></ul>
+      </div>
+    </div>
+
+    <div class="mt-3">
+      <button id="showByMunicipalityBtn" class="btn btn-outline-success">Show Roads in Selected Municipality</button>
+      <button id="exportCSV" class="btn btn-outline-primary ms-2">Export All Unique Road Names to CSV</button>
+      <button id="clearResults" class="btn btn-outline-secondary ms-2">Clear Results</button>
+    </div>
+  </div>
+
+  <footer>
+    Made with <span style="color: #e25555">&hearts;</span> in Frontenac County &copy; 2025 County of Frontenac
+  </footer>
+
+  <script>
+const roadSearch = document.getElementById('roadSearch');
+  const suggestionsDiv = document.getElementById('suggestions');
+  const result = document.getElementById('result');
+  const exportBtn = document.getElementById('exportCSV');
+  const clearResultsBtn = document.getElementById('clearResults');
+  const similarResults = document.getElementById('similarResults');
+  const similarNamesList = document.getElementById('similarNames');
+  const municipalityFilter = document.getElementById('municipalityFilter');
+  const showByMunicipalityBtn = document.getElementById('showByMunicipalityBtn');
+  const municipalityRoadsResult = document.getElementById('municipalityRoadsResult');
+  const municipalityRoadsList = document.getElementById('municipalityRoadsList');
+  const selectedMunDisplay = document.getElementById('selectedMunDisplay');
+
+  // New global loading indicator elements
+  const loadingIndicatorGlobal = document.getElementById('loadingIndicatorGlobal');
+  const loadingTextGlobal = document.getElementById('loadingTextGlobal');
+
+  let roadData = []; // Stores objects: { name: 'ROAD NAME', municipality: 'NORMALIZED MUNICIPALITY' }
+  let uniqueNormalizedMunicipalities = new Set();
+  let selectedSuggestionIndex = -1;
+
+  function normalizeMunicipalityName(name) {
+    if (!name) return "";
+    let normalized = name.trim().toUpperCase();
+    normalized = normalized.replace(/\bFRONTEANC\b/g, "FRONTENAC"); // Typo correction
+    if (normalized.startsWith("TOWNSHIP OF ")) {
+        normalized = normalized.substring("TOWNSHIP OF ".length).trim();
+        if (!normalized.endsWith(" TOWNSHIP") && normalized !== "FRONTENAC ISLANDS") {
+            normalized += " TOWNSHIP";
+        }
+    } else if (normalized.startsWith("TWP OF ")) {
+        normalized = normalized.substring("TWP OF ".length).trim();
+        if (!normalized.endsWith(" TOWNSHIP") && normalized !== "FRONTENAC ISLANDS") {
+            normalized += " TOWNSHIP";
+        }
+    }
+    normalized = normalized.replace(/\s+TWP$/, " TOWNSHIP");
+    normalized = normalized.replace(/\s+TWP\.$/, " TOWNSHIP");
+    normalized = normalized.replace(/\s+TOWNSHIPS$/, " TOWNSHIP");
+    const coreTownshipsNeedingSuffix = ["CENTRAL FRONTENAC", "NORTH FRONTENAC", "SOUTH FRONTENAC"];
+    if (coreTownshipsNeedingSuffix.includes(normalized) && !normalized.endsWith(" TOWNSHIP")) {
+        normalized += " TOWNSHIP";
+    }
+    normalized = normalized.replace(/\s+/g, " ").trim();
+    return normalized;
+  }
+
+  async function fetchAllRoadData() {
+    roadData = [];
+    uniqueNormalizedMunicipalities = new Set();
+    let allEntries = new Set();
+    let offset = 0;
+    const pageSize = 1000;
+    let keepFetching = true;
+    let totalFetched = 0;
+
+    // Show global loading indicator
+    loadingIndicatorGlobal.style.display = 'block';
+    loadingTextGlobal.textContent = 'Connecting to the road database...';
+    result.classList.add('d-none'); // Hide main result area during load
+    exportBtn.disabled = true; // Disable export button during load
+
+    while (keepFetching) {
+      const url = `https://services2.arcgis.com/vJlmDE1PmdTcJF0N/arcgis/rest/services/Frontenac_Road_Nework_View/FeatureServer/0/query?where=1%3D1&outFields=NAME_FULL,MUNICIPALITY&resultOffset=${offset}&resultRecordCount=${pageSize}&f=json&orderByFields=MUNICIPALITY,NAME_FULL`;
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.error) {
+          console.error('API Error:', data.error);
+          result.textContent = `Error fetching road data: ${data.error.message}. Please try again later.`;
+          result.className = 'alert alert-danger mt-3';
+          result.classList.remove('d-none');
+          keepFetching = false;
+          break;
+        }
+
+        if (!data.features || data.features.length === 0) {
+          keepFetching = false;
+          break;
+        }
+        
+        totalFetched += data.features.length;
+        loadingTextGlobal.textContent = `Loading road data... Fetched ${totalFetched} records so far.`;
+
+        data.features.forEach(f => {
+          if (f.attributes && f.attributes.NAME_FULL) {
+            const roadName = f.attributes.NAME_FULL.trim().toUpperCase();
+            const rawMunicipality = f.attributes.MUNICIPALITY;
+            const normalizedMunicipality = normalizeMunicipalityName(rawMunicipality || "UNKNOWN");
+            
+            allEntries.add(JSON.stringify({ name: roadName, municipality: normalizedMunicipality }));
+            if (rawMunicipality) {
+              uniqueNormalizedMunicipalities.add(normalizedMunicipality);
+            }
+          }
+        });
+
+        if (typeof data.exceededTransferLimit === 'boolean') {
+          keepFetching = data.exceededTransferLimit;
+        } else {
+          keepFetching = data.features.length === pageSize;
+        }
+
+        if (keepFetching) {
+          offset += pageSize;
+        }
+
+      } catch (e) {
+        console.error('Fetch error:', e);
+        result.textContent = 'Fetch error: Could not retrieve road data. Check console for details.';
+        result.className = 'alert alert-danger mt-3';
+        result.classList.remove('d-none');
+        keepFetching = false;
+      }
+    }
+
+    loadingIndicatorGlobal.style.display = 'none'; // Hide global loading indicator
+    roadData = Array.from(allEntries).map(entry => JSON.parse(entry));
+    populateMunicipalityDropdown();
+
+    if (roadData.length > 0) {
+      result.textContent = `Successfully loaded ${roadData.length} unique road entries. Ready to search.`;
+      result.className = 'alert alert-success mt-3';
+      exportBtn.disabled = false; // Enable export button
+      setTimeout(() => result.classList.add('d-none'), 4000);
+    } else if (!result.textContent.includes('Error')) {
+      result.textContent = 'No road data found or failed to load all data.';
+      result.className = 'alert alert-warning mt-3';
+      result.classList.remove('d-none');
+    }
+    // Initial state for showByMunicipalityBtn
+    showByMunicipalityBtn.disabled = municipalityFilter.value === "";
+  }
+
+  function populateMunicipalityDropdown() {
+    municipalityFilter.innerHTML = '<option value="">All Municipalities</option>';
+    const sortedMunicipalities = Array.from(uniqueNormalizedMunicipalities).sort();
+    sortedMunicipalities.forEach(munNorm => {
+      const option = document.createElement('option');
+      option.value = munNorm;
+      option.textContent = munNorm.toLowerCase().split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' ');
+      municipalityFilter.appendChild(option);
+    });
+  }
+
+  function showSuggestions(input) {
+    suggestionsDiv.innerHTML = '';
+    selectedSuggestionIndex = -1;
+
+    if (input.length < 2) {
+      suggestionsDiv.style.display = 'none';
+      return;
+    }
+
+    const currentNormMunicipality = normalizeMunicipalityName(municipalityFilter.value);
+    const inputUpper = input.toUpperCase();
+    let searchPool = roadData;
+
+    if (currentNormMunicipality) {
+      searchPool = roadData.filter(road => road.municipality === currentNormMunicipality);
+    }
+
+    const uniqueRoadNamesInPool = Array.from(new Set(searchPool.map(road => road.name))).sort();
+    const matches = uniqueRoadNamesInPool.filter(name => name.includes(inputUpper));
+
+    if (matches.length > 0) {
+      matches.slice(0, 10).forEach((match, index) => {
+        const div = document.createElement('div');
+        div.className = 'suggestion';
+        div.textContent = match;
+        div.onclick = () => selectSuggestion(match);
+        div.onmouseover = () => updateSelectedSuggestionHighlight(index);
+        suggestionsDiv.appendChild(div);
+      });
+      suggestionsDiv.style.display = 'block';
+    } else if (input.length >=2) { // Added condition: only show "no suggestions" if input is present
+        const div = document.createElement('div');
+        div.className = 'suggestion text-muted p-2'; // Use different styling for this message
+        div.textContent = 'No road names match your query.';
+        suggestionsDiv.appendChild(div);
+        suggestionsDiv.style.display = 'block';
+    }
+     else {
+      suggestionsDiv.style.display = 'none';
+    }
+    updateSelectedSuggestionVisuals();
+  }
+
+  function selectSuggestion(name) {
+    roadSearch.value = name;
+    suggestionsDiv.innerHTML = '';
+    suggestionsDiv.style.display = 'none';
+    selectedSuggestionIndex = -1;
+    displayResult(name);
+    municipalityRoadsResult.classList.add('d-none');
+  }
+  
+  function updateSelectedSuggestionHighlight(index) {
+      selectedSuggestionIndex = index;
+      updateSelectedSuggestionVisuals();
+  }
+
+  function updateSelectedSuggestionVisuals() {
+    const items = suggestionsDiv.getElementsByClassName('suggestion');
+    Array.from(items).forEach((item, idx) => {
+      if (idx === selectedSuggestionIndex && !item.classList.contains('text-muted')) { // Don't select "No results" message
+        item.classList.add('selected');
+        item.scrollIntoView({ block: 'nearest', inline: 'start' });
+      } else {
+        item.classList.remove('selected');
+      }
+    });
+  }
+
+  function displayResult(nameInput) {
+    const normalizedRoadName = nameInput.trim().toUpperCase();
+    if (!normalizedRoadName) {
+        result.className = 'alert alert-warning mt-3';
+        result.textContent = "Please enter a road name to search.";
+        result.classList.remove('d-none');
+        similarResults.classList.add('d-none'); // Ensure similar is hidden
+        return;
+    }
+
+    const selectedNormMunicipality = normalizeMunicipalityName(municipalityFilter.value);
+    let roadExists = false;
+    let existenceMessage = "";
+
+    let checkPool = roadData;
+    if (selectedNormMunicipality) {
+        checkPool = roadData.filter(rd => rd.municipality === selectedNormMunicipality);
+    }
+    
+    const foundRoads = checkPool.filter(road => road.name === normalizedRoadName);
+    roadExists = foundRoads.length > 0;
+
+    if (selectedNormMunicipality) {
+      existenceMessage = roadExists ?
+        `✅ Yes, "${nameInput}" exists in ${selectedNormMunicipality.toLowerCase().split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' ')}.` :
+        `❌ No, "${nameInput}" was not found in ${selectedNormMunicipality.toLowerCase().split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' ')}.`;
+    } else {
+      const municipalitiesContainingRoad = roadData
+            .filter(road => road.name === normalizedRoadName)
+            .map(road => road.municipality.toLowerCase().split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' '))
+            .filter((value, index, self) => self.indexOf(value) === index); // Unique
+
+      roadExists = municipalitiesContainingRoad.length > 0;
+      existenceMessage = roadExists ?
+        `✅ Yes, "${nameInput}" exists. Found in: ${municipalitiesContainingRoad.join(', ')}.` :
+        `❌ No, "${nameInput}" was not found in any municipality.`;
+    }
+
+    result.className = roadExists ? 'alert alert-success mt-3' : 'alert alert-danger mt-3';
+    result.textContent = existenceMessage;
+    result.classList.remove('d-none');
+
+    if (roadExists) {
+      similarResults.classList.add('d-none');
+    } else {
+      findSimilarRoadNames(normalizedRoadName, selectedNormMunicipality);
+    }
+    municipalityRoadsResult.classList.add('d-none');
+    suggestionsDiv.style.display = 'none';
+  }
+
+  function findSimilarRoadNames(name, currentNormMunicipality = "") {
+    similarNamesList.innerHTML = '';
+    let searchPool = roadData;
+
+    if (currentNormMunicipality) {
+      searchPool = roadData.filter(road => road.municipality === currentNormMunicipality);
+    }
+    const uniqueNamesInPool = Array.from(new Set(searchPool.map(r => r.name))).sort();
+
+    // A slightly more refined search for similarity: parts of the name match
+    const nameParts = name.split(/\s+/).filter(part => part.length > 1); // Split by space, ignore short parts
+    let fuzzyMatches = uniqueNamesInPool.filter(roadName => {
+        if (roadName === name) return false; // Exclude exact match
+        if (roadName.includes(name)) return true; // Original broad check
+        // Check if roadName includes any significant part of the search term
+        return nameParts.some(part => roadName.includes(part));
+    }).slice(0, 5);
+
+
+    if (fuzzyMatches.length === 0) {
+      similarResults.classList.add('d-none');
+    } else {
+      similarResults.classList.remove('d-none');
+      const munText = currentNormMunicipality ? ` in ${currentNormMunicipality.toLowerCase().split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' ')}` : ' (all municipalities)';
+      document.querySelector('#similarResults h5').textContent = `Similar road names${munText}:`;
+      fuzzyMatches.forEach(match => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item list-group-item-action';
+        li.textContent = match;
+        li.onclick = () => selectSuggestion(match);
+        similarNamesList.appendChild(li);
+      });
+    }
+  }
+
+  function displayRoadsByMunicipality() {
+    municipalityRoadsList.innerHTML = '';
+    const selectedMunicipalityValue = municipalityFilter.value; 
+    const selectedNormMun = normalizeMunicipalityName(selectedMunicipalityValue);
+
+    if (!selectedNormMun) { // Should be prevented by disabled button, but good to check
+      municipalityRoadsResult.classList.add('d-none');
+      result.className = 'alert alert-warning mt-3';
+      result.textContent = 'Please select a municipality first.';
+      result.classList.remove('d-none');
+      similarResults.classList.add('d-none');
+      return;
+    }
+    const munDisplayName = selectedNormMun.toLowerCase().split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' ');
+    selectedMunDisplay.textContent = munDisplayName;
+
+    const roadsInMun = roadData
+      .filter(road => road.municipality === selectedNormMun)
+      .map(road => road.name)
+      .filter((name, index, self) => self.indexOf(name) === index)
+      .sort();
+
+    if (roadsInMun.length === 0) {
+      municipalityRoadsList.innerHTML = '<li class="list-group-item">No roads found for this municipality.</li>';
+    } else {
+      roadsInMun.forEach(roadName => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item list-group-item-action';
+        li.textContent = roadName;
+        li.onclick = () => {
+          roadSearch.value = roadName;
+          displayResult(roadName);
+          suggestionsDiv.style.display = 'none';
+          // Keep municipalityRoadsResult visible if desired, or hide it
+          // municipalityRoadsResult.classList.add('d-none'); 
+        };
+        municipalityRoadsList.appendChild(li);
+      });
+    }
+    municipalityRoadsResult.classList.remove('d-none');
+    result.classList.add('d-none'); 
+    similarResults.classList.add('d-none'); 
+    suggestionsDiv.style.display = 'none';
+  }
+
+  function downloadCSV() {
+    const uniqueRoadNames = Array.from(new Set(roadData.map(item => item.name))).sort();
+    if (uniqueRoadNames.length === 0) {
+        alert("No road data available to export.");
+        return;
+    }
+    let csvContent = 'Road Name\n';
+    csvContent += uniqueRoadNames.join('\n');
+    const encodedUri = encodeURI('data:text/csv;charset=utf-8,' + csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'frontenac_all_unique_road_names.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  roadSearch.addEventListener('input', () => {
+      showSuggestions(roadSearch.value);
+      municipalityRoadsResult.classList.add('d-none'); // Hide mun roads when typing new search
+      // result.classList.add('d-none'); // Optionally hide main result too
+      // similarResults.classList.add('d-none'); // Optionally hide similar results
+  });
+
+  municipalityFilter.addEventListener('change', () => {
+    showByMunicipalityBtn.disabled = municipalityFilter.value === ""; // Update button state
+    if (roadSearch.value.length >=2) {
+        showSuggestions(roadSearch.value);
+    } else {
+        suggestionsDiv.style.display = 'none';
+    }
+    // Clear previous results when municipality changes
+    result.classList.add('d-none');
+    similarResults.classList.add('d-none');
+    municipalityRoadsResult.classList.add('d-none');
+  });
+
+  roadSearch.addEventListener('keydown', (e) => {
+    const items = suggestionsDiv.getElementsByClassName('suggestion');
+    const activeSuggestions = Array.from(items).filter(item => !item.classList.contains('text-muted'));
+
+
+    if (e.key === 'Enter') {
+      e.preventDefault(); 
+      if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < activeSuggestions.length && suggestionsDiv.style.display === 'block') {
+        selectSuggestion(activeSuggestions[selectedSuggestionIndex].textContent);
+      } else {
+        displayResult(roadSearch.value); 
+      }
+      suggestionsDiv.innerHTML = ''; // Clear suggestions
+      suggestionsDiv.style.display = 'none';
+      selectedSuggestionIndex = -1;
+    } else if (e.key === 'ArrowDown') {
+      if (suggestionsDiv.style.display === 'block' && activeSuggestions.length > 0) {
+          e.preventDefault();
+          selectedSuggestionIndex = (selectedSuggestionIndex + 1) % activeSuggestions.length;
+          updateSelectedSuggestionVisuals();
+      }
+    } else if (e.key === 'ArrowUp') {
+      if (suggestionsDiv.style.display === 'block' && activeSuggestions.length > 0) {
+          e.preventDefault();
+          selectedSuggestionIndex = (selectedSuggestionIndex - 1 + activeSuggestions.length) % activeSuggestions.length;
+          updateSelectedSuggestionVisuals();
+      }
+    } else if (e.key === 'Escape') {
+      suggestionsDiv.innerHTML = '';
+      suggestionsDiv.style.display = 'none';
+      selectedSuggestionIndex = -1;
+    }
+  });
+  
+  document.addEventListener('click', function(event) {
+      const isClickInsideSearch = roadSearch.contains(event.target);
+      const isClickInsideSuggestions = suggestionsDiv.contains(event.target);
+      if (!isClickInsideSearch && !isClickInsideSuggestions) {
+          suggestionsDiv.style.display = 'none';
+      }
+  });
+
+  exportBtn.addEventListener('click', downloadCSV);
+
+  clearResultsBtn.addEventListener('click', () => {
+    roadSearch.value = '';
+    suggestionsDiv.innerHTML = '';
+    suggestionsDiv.style.display = 'none';
+    result.classList.add('d-none');
+    similarResults.classList.add('d-none');
+    municipalityRoadsResult.classList.add('d-none');
+    municipalityFilter.value = ""; 
+    showByMunicipalityBtn.disabled = true; // Disable button
+    selectedSuggestionIndex = -1;
+  });
+
+  showByMunicipalityBtn.addEventListener('click', displayRoadsByMunicipality);
+
+  document.getElementById('darkModeToggle').addEventListener('click', () => {
+    document.body.classList.toggle('dark-mode');
+  });
+
+  // Initial setup
+  exportBtn.disabled = true;
+  showByMunicipalityBtn.disabled = true;
+  fetchAllRoadData();
+  </script>
+</body>
+</html>

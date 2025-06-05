@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>K&P Trail Issue Report Generator</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+        --primary-blue: #2c5f9b; /* A slightly darker, richer blue */
+        --light-blue: #e0f2f7;
+        --text-dark: #343a40; /* Darker grey for text */
+        --text-light: #6c757d; /* Lighter grey for secondary text */
+        --border-color: #e9ecef; /* Lighter, subtle borders */
+        --card-bg: #ffffff;
+        --body-bg: #f4f7f6; /* A very light, calming background */
+        --shadow-subtle: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        --shadow-medium: 0 0.5rem 1rem rgba(0, 0, 0, 0.08);
+    }
+
+    body {
+      font-family: 'Open Sans', sans-serif;
+      color: var(--text-dark);
+      background-color: var(--body-bg);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    h2, h5 {
+      font-family: 'Montserrat', sans-serif;
+      color: var(--primary-blue);
+      margin-bottom: 1.5rem;
+      font-weight: 700; /* Bolder headings */
+    }
+
+    .container.py-4 {
+        padding-top: 2.5rem !important;
+        padding-bottom: 2.5rem !important;
+        flex-grow: 1;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control, .form-select {
+        border-color: var(--border-color);
+        box-shadow: none;
+        padding: 0.6rem 0.75rem; /* Slightly more padding */
+        border-radius: 0.3rem; /* Slightly less rounded */
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 0.2rem rgba(44, 95, 155, 0.25); /* Adjusted shadow color for new blue */
+    }
+
+    .btn-primary {
+      background-color: var(--primary-blue);
+      border-color: var(--primary-blue);
+      transition: all 0.2s ease-in-out;
+      font-weight: 600;
+      padding: 0.6rem 1.2rem;
+      border-radius: 0.3rem;
+    }
+
+    .btn-primary:hover {
+      background-color: #244b7d; /* Darker on hover */
+      border-color: #244b7d;
+      transform: translateY(-1px); /* Slight lift effect */
+      box-shadow: var(--shadow-subtle);
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        border-color: #28a745;
+        transition: all 0.2s ease-in-out;
+        font-weight: 600;
+        padding: 0.6rem 1.2rem;
+        border-radius: 0.3rem;
+    }
+
+    .btn-success:hover {
+        background-color: #218838;
+        border-color: #1e7e34;
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-subtle);
+    }
+
+    .map-container-class {
+      height: 280px;
+      width: 100%;
+      border: 1px solid var(--border-color);
+      border-radius: 0.3rem;
+      margin-top: 15px;
+      background-color: #f0f0f0;
+    }
+
+    .card.report-preview {
+      margin-bottom: 2.5rem; /* More space between cards */
+      padding: 1.75rem; /* More internal padding */
+      border: 1px solid var(--border-color);
+      border-radius: 0.6rem; /* More rounded corners for cards */
+      background-color: var(--card-bg);
+      box-shadow: var(--shadow-medium); /* More prominent shadow */
+      position: relative;
+      overflow: hidden; /* Ensures checkbox doesn't overflow rounded corners */
+      transition: transform 0.2s ease-in-out; /* Add hover effect */
+    }
+
+    .card.report-preview:hover {
+        transform: translateY(-3px); /* Lift on hover */
+        box-shadow: 0 0.8rem 1.5rem rgba(0, 0, 0, 0.1); /* Stronger shadow on hover */
+    }
+
+    .report-selection-checkbox {
+        position: absolute;
+        top: 1.2rem;
+        right: 1.2rem;
+        z-index: 10;
+        transform: scale(1.6); /* Slightly larger checkbox */
+        cursor: pointer;
+    }
+
+    .report-image {
+      max-width: 300px; /* Constrain max width for display on site */
+      height: auto; /* Maintain aspect ratio */
+      display: block; /* Ensures images stack vertically */
+      margin-top: 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 0.25rem;
+      box-shadow: var(--shadow-subtle);
+    }
+    
+    .image-previews {
+      display: flex; /* Allow images to line up */
+      flex-wrap: wrap; /* Wrap images to next line if space runs out */
+      gap: 10px; /* Space between images */
+    }
+
+    .loading-spinner {
+      display: none;
+      margin: 40px auto; /* More vertical space for spinner */
+      color: var(--primary-blue);
+      width: 3rem;
+      height: 3rem;
+    }
+
+    table.table-bordered {
+      border-color: var(--border-color);
+      margin-bottom: 1.5rem; /* More space below table */
+      border-radius: 0.3rem; /* Rounded table corners */
+      overflow: hidden; /* For rounded corners to apply */
+    }
+
+    table.table-bordered th, table.table-bordered td {
+      border-color: var(--border-color);
+      vertical-align: middle;
+      padding: 0.75rem; /* More padding in table cells */
+    }
+
+    table.table-bordered th {
+        background-color: var(--light-blue);
+        font-weight: 600;
+        color: var(--primary-blue); /* Headers in primary blue */
+    }
+
+    .alert {
+        margin-top: 1.5rem;
+        border-radius: 0.3rem;
+        padding: 1rem 1.25rem;
+        font-weight: 600;
+    }
+
+    /* Corrected alert colors */
+    .alert-info {
+        background-color: #d1ecf1;
+        border-color: #bee5eb;
+        color: #0c5460;
+    }
+    .alert-warning {
+        background-color: #fff3cd; /* Brighter warning */
+        border-color: #ffc107;
+        color: #856404;
+    }
+    .alert-danger {
+        background-color: #f8d7da;
+        border-color: #dc3545;
+        color: #721c24;
+    }
+    .alert-success {
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+        color: #155724;
+    }
+
+    .footer {
+        text-align: center;
+        padding: 2rem 0;
+        margin-top: auto;
+        border-top: 1px solid var(--border-color);
+        background-color: var(--card-bg);
+        color: var(--text-light);
+        font-size: 0.85rem;
+    }
+
+    /* Floating Export Controls */
+    .export-controls-floating {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        background-color: rgba(255, 255, 255, 0.98); /* Less transparent */
+        padding: 18px; /* More padding */
+        border-radius: 0.75rem; /* More rounded */
+        box-shadow: var(--shadow-medium);
+        display: flex;
+        flex-direction: column;
+        gap: 12px; /* More space between items */
+        align-items: stretch; /* Stretch buttons to full width of the container */
+        border: 1px solid var(--border-color);
+        min-width: 220px; /* Ensure buttons have enough space */
+    }
+
+    .export-controls-floating .form-check {
+        margin-bottom: 0.5rem; /* Add some space below select all */
+        padding-left: 2rem; /* Indent checkbox for alignment */
+    }
+    .export-controls-floating .form-check-input {
+        margin-left: -1.5rem; /* Pull checkbox back to left */
+    }
+
+    .export-controls-floating .btn {
+        width: 100%; /* Make buttons take full width */
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .export-controls-floating {
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            min-width: unset; /* Remove min-width on small screens */
+            padding: 15px;
+            gap: 10px;
+            flex-direction: row; /* Layout buttons in a row for small screens */
+            flex-wrap: wrap; /* Allow buttons to wrap */
+            justify-content: center; /* Center buttons */
+        }
+        .export-controls-floating .btn {
+            flex-grow: 1; /* Allow buttons to grow */
+            min-width: 150px; /* Minimum width for small screen buttons */
+        }
+        .export-controls-floating .form-check {
+            width: 100%; /* Take full width */
+            text-align: center;
+            margin-bottom: 10px;
+            padding-left: 0;
+        }
+        .export-controls-floating .form-check-input {
+            margin-left: 0;
+            margin-right: 0.5rem; /* Add space next to checkbox */
+        }
+    }
+  </style>
+</head>
+<body class="d-flex flex-column">
+  <div class="container py-4">
+    <h2 class="text-center mb-4">K&P Trail Issue Report Generator</h2>
+    <div class="card p-4 mb-4 shadow-sm">
+        <div class="row gx-4 gy-4"> <div class="col-md-3">
+                <label for="dateStartFilter" class="form-label">Date From</label>
+                <input type="date" id="dateStartFilter" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label for="dateEndFilter" class="form-label">Date To</label>
+                <input type="date" id="dateEndFilter" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label for="issueFilter" class="form-label">Filter by Issue</label>
+                <select id="issueFilter" class="form-select">
+                    <option value="">All Issues</option>
+                    <option value="Bench">Bench</option>
+                    <option value="Bridge">Bridge</option>
+                    <option value="Culvert">Culvert</option>
+                    <option value="Drainage">Drainage</option>
+                    <option value="Fence">Fence</option>
+                    <option value="Garbage">Garbage</option>
+                    <option value="Graffiti">Graffiti</option>
+                    <option value="Signage">Signage</option>
+                    <option value="Surface Damage">Surface Damage</option>
+                    <option value="Trees">Trees</option>
+                    <option value="Water/ Flooding">Water/ Flooding</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="statusFilter" class="form-label">Filter by Status</label>
+                <select id="statusFilter" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="New">New</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Resolved">Resolved</option>
+                </select>
+            </div>
+            <div class="col-12 d-flex justify-content-center mt-3"> <button id="loadReportsBtn" class="btn btn-primary px-5">Load Reports</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-center">
+      <div class="spinner-border loading-spinner" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+
+    <div id="statusMessage" class="alert alert-info" style="display: none;"></div>
+
+    <div id="reportContainer" class="mt-4"></div>
+  </div>
+
+  <div id="exportControls" class="export-controls-floating" style="display: none;">
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="selectAllReportsCheckbox">
+      <label class="form-check-label" for="selectAllReportsCheckbox">Select All</label>
+    </div>
+    <button id="exportSelectedPdfsBtn" class="btn btn-success">Export Selected as PDFs</button>
+    <button id="exportAllPdfsBtn" class="btn btn-success">Export All as PDFs</button>
+  </div>
+
+  <footer class="footer">
+    <p>Made with ❤️ in Frontenac</p>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    const serviceBaseUrl = "https://services2.arcgis.com/vJlmDE1PmdTcJF0N/ArcGIS/rest/services/survey123_000f8fecd3f842c3b59f4b4a437c29d9_results/FeatureServer/0";
+    const { jsPDF } = window.jspdf;
+    let activeMaps = []; // To keep track of map instances for proper rendering
+    let allReportsData = []; // Store all fetched report data (feature objects from ArcGIS)
+
+    const loadReportsBtn = document.getElementById('loadReportsBtn');
+    const exportAllPdfsBtn = document.getElementById('exportAllPdfsBtn');
+    const exportSelectedPdfsBtn = document.getElementById('exportSelectedPdfsBtn');
+    const reportContainer = document.getElementById('reportContainer');
+    const statusMessage = document.getElementById('statusMessage');
+    const loadingSpinner = document.querySelector('.loading-spinner');
+    const exportControls = document.getElementById('exportControls');
+    const selectAllReportsCheckbox = document.getElementById('selectAllReportsCheckbox');
+    const statusFilter = document.getElementById('statusFilter'); // New: Get status filter element
+
+    loadReportsBtn.addEventListener('click', fetchFeatures);
+    exportAllPdfsBtn.addEventListener('click', () => generateAndZipPDFs(allReportsData.map(f => `report-card-${f.attributes.objectid || `temp-${allReportsData.indexOf(f)}`}`))); // Pass IDs for all reports
+    exportSelectedPdfsBtn.addEventListener('click', () => {
+        const selectedReportIds = Array.from(document.querySelectorAll('.report-selection-checkbox:checked'))
+                                            .map(checkbox => checkbox.closest('.report-preview').id);
+        if (selectedReportIds.length === 0) {
+            showStatus("No reports selected for export. Please check at least one report.", "warning");
+            return;
+        }
+        generateAndZipPDFs(selectedReportIds);
+    });
+
+    selectAllReportsCheckbox.addEventListener('change', (event) => {
+        document.querySelectorAll('.report-selection-checkbox').forEach(checkbox => {
+            checkbox.checked = event.target.checked;
+        });
+    });
+
+    function showLoading(isLoading) {
+        loadingSpinner.style.display = isLoading ? 'flex' : 'none'; /* Use flex for centering */
+        loadReportsBtn.disabled = isLoading;
+        // Disable/enable export buttons and select all only during initial load/fetch
+        exportAllPdfsBtn.disabled = isLoading;
+        exportSelectedPdfsBtn.disabled = isLoading;
+        selectAllReportsCheckbox.disabled = isLoading;
+    }
+
+    function showStatus(message, type = 'info') {
+        statusMessage.textContent = message;
+        statusMessage.className = `alert alert-${type} mt-3`;
+        statusMessage.style.display = 'block';
+    }
+    
+    function hideStatus() {
+        statusMessage.style.display = 'none';
+    }
+
+    async function fetchFeatures() {
+      // Clear previous reports and maps
+      activeMaps.forEach(map => {
+          try { map.remove(); } catch(e) { console.warn("Error removing map", e); }
+      });
+      activeMaps = [];
+      reportContainer.innerHTML = ""; 
+      exportControls.style.display = 'none'; // Hide controls when fetching new data
+      hideStatus();
+      showLoading(true);
+      allReportsData = [];
+
+      const dateStart = document.getElementById("dateStartFilter").value;
+      const dateEnd = document.getElementById("dateEndFilter").value;
+      const issue = document.getElementById("issueFilter").value;
+      const status = statusFilter.value; // New: Get status filter value
+      
+      let whereClauses = ["1=1"];
+      
+      if (dateStart) whereClauses.push(`datereport >= DATE '${dateStart}'`);
+      if (dateEnd) {
+        const endDateAdjusted = new Date(dateEnd);
+        endDateAdjusted.setDate(endDateAdjusted.getDate() + 1);
+        whereClauses.push(`datereport < DATE '${endDateAdjusted.toISOString().split('T')[0]}'`); 
+      }
+      if (issue) whereClauses.push(`issue = '${issue}'`);
+      if (status) whereClauses.push(`status = '${status}'`); // New: Add status filter
+
+      const fieldsToFetch = "objectid,Creator,datereport,issue,comments,presolution,locationtext,reported,priority,status,dateresolved,costs";
+
+      const params = new URLSearchParams({
+        where: whereClauses.join(" AND "),
+        outFields: fieldsToFetch, 
+        f: "json",
+        returnGeometry: true,
+        orderByFields: 'datereport DESC'
+      });
+
+      try {
+        console.log("Fetching from URL:", `${serviceBaseUrl}/query?${params.toString()}`);
+        const response = await fetch(`${serviceBaseUrl}/query?${params.toString()}`);
+        
+        if (!response.ok) {
+          throw new Error(`Network response was not ok: ${response.statusText} (${response.status})`);
+        }
+        
+        const data = await response.json();
+        console.log("Response data:", data);
+
+        if (data.error) {
+          throw new Error(`Service error: ${data.error.message}`);
+        }
+
+        if (!data.features || data.features.length === 0) {
+          showStatus("No reports found matching your criteria.", "warning");
+          exportControls.style.display = 'none';
+          return;
+        }
+        
+        showStatus(`Found ${data.features.length} reports. Loading details...`, "info");
+        allReportsData = data.features;
+
+        // Using Promise.all to load attachments for all features concurrently
+        const featurePromises = data.features.map(async (feature, index) => {
+            const attributes = feature.attributes;
+            const objectId = attributes.objectid; 
+            const cardId = `report-card-${objectId || `temp-${index}`}`; 
+            const mapId = `map-container-${objectId || `temp-${index}`}`;
+            const imageContainerId = `image-container-${objectId || `temp-${index}`}`;
+            
+            const dateReportedFormatted = attributes.datereport ? new Date(attributes.datereport).toLocaleDateString('en-CA') : "N/A"; 
+            const dateResolvedFormatted = attributes.dateresolved ? new Date(attributes.dateresolved).toLocaleDateString('en-CA') : "N/A";
+
+            const creatorName = attributes.Creator || attributes.reported || "N/A";
+            const issueType = attributes.issue || "N/A";
+            const commentsText = attributes.comments || "N/A";
+            const locationDesc = attributes.locationtext || "N/A";
+            const resolutionNotes = attributes.presolution || "N/A";
+            const priorityLevel = attributes.priority || "N/A";
+            const currentStatus = attributes.status || "N/A";
+            const costValue = attributes.costs !== null && attributes.costs !== undefined ? `$${attributes.costs}` : "N/A";
+
+            const cardHtml = `
+              <div class="card report-preview" id="${cardId}" data-object-id="${objectId}">
+                <input type="checkbox" class="report-selection-checkbox form-check-input" data-object-id="${objectId}">
+                <h5>K&P Trail Issue Report (ID: ${objectId || 'N/A'})</h5>
+                <table class="table table-bordered table-sm">
+                  <tbody>
+                      <tr>
+                          <th>Submitted by</th><td>${creatorName}</td>
+                          <th>Date Reported</th><td>${dateReportedFormatted}</td>
+                      </tr>
+                      <tr>
+                          <th>Issue Type</th><td>${issueType}</td>
+                          <th>Priority</th><td>${priorityLevel}</td>
+                      </tr>
+                      <tr>
+                          <th>Status</th><td>${currentStatus}</td>
+                          <th>Date Resolved</th><td>${dateResolvedFormatted}</td>
+                      </tr>
+                      <tr>
+                          <th colspan="2">Details/Comments</th>
+                          <th colspan="2">Location Description</th>
+                      </tr>
+                      <tr>
+                          <td colspan="2">${commentsText}</td>
+                          <td colspan="2">${locationDesc}</td>
+                      </tr>
+                      <tr>
+                          <th colspan="2">Proposed Resolution</th>
+                          <th colspan="2">Cost</th>
+                      </tr>
+                      <tr>
+                          <td colspan="2">${resolutionNotes}</td>
+                          <td colspan="2">${costValue}</td>
+                      </tr>
+                  </tbody>
+                </table>
+                <p class="mb-1"><strong>Images:</strong></p>
+                <div id="${imageContainerId}" class="image-previews"><small>Loading image(s)...</small></div>
+                <p class="mt-3 mb-1"><strong>Map Location:</strong></p>
+                <div id="${mapId}" class="map-container-class"></div>
+              </div>
+            `;
+            reportContainer.insertAdjacentHTML('beforeend', cardHtml);
+
+            await fetchAttachmentImage(objectId, imageContainerId); // Await image fetching
+            
+            const geometry = feature.geometry;
+            if (geometry && geometry.x && geometry.y) {
+                const mapElement = document.getElementById(mapId);
+                if (mapElement) {
+                    try {
+                        const map = L.map(mapId).setView([geometry.y, geometry.x], 16);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; OpenStreetMap contributors',
+                            crossOrigin: true 
+                        }).addTo(map);
+                        L.marker([geometry.y, geometry.x]).addTo(map);
+                        activeMaps.push(map); 
+                        setTimeout(() => { try { map.invalidateSize(); } catch(e){} }, 500); 
+                    } catch (mapError) {
+                        console.error("Error initializing map for OID:", objectId, mapError);
+                        mapElement.innerHTML = "<small>Error loading map.</small>";
+                    }
+                }
+            } else {
+                 const mapElement = document.getElementById(mapId);
+                 if(mapElement) mapElement.innerHTML = "<small>No geographic location provided.</small>";
+            }
+        });
+
+        await Promise.all(featurePromises); // Wait for all reports and their content (incl. images) to be rendered
+
+        if(data.features.length > 0) {
+            exportControls.style.display = 'flex';
+            hideStatus();
+        }
+
+      } catch (error) {
+        console.error("Error fetching features:", error);
+        showStatus(`Error fetching reports: ${error.message}`, "danger");
+        exportControls.style.display = 'none';
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    async function fetchAttachmentImage(objectId, containerId) {
+        const imageContainer = document.getElementById(containerId);
+        if (!imageContainer) return;
+
+        if (!objectId || objectId === 0) {
+            imageContainer.innerHTML = "<small>No image: Valid Object ID missing.</small>";
+            return;
+        }
+        
+        try {
+            const attachmentQueryUrl = `${serviceBaseUrl}/${objectId}/attachments?f=json`;
+            const response = await fetch(attachmentQueryUrl);
+            if (!response.ok) throw new Error(`Attachment info HTTP error ${response.status}`);
+            const attachmentData = await response.json();
+
+            if (attachmentData.error) throw new Error(attachmentData.error.message);
+
+            const imageAttachments = attachmentData.attachmentInfos && attachmentData.attachmentInfos.filter(att => att.contentType && att.contentType.startsWith("image/"));
+
+            if (imageAttachments && imageAttachments.length > 0) {
+                imageContainer.innerHTML = ''; // Clear "Loading image(s)..." message
+                const imageLoadPromises = [];
+                for (const imageInfo of imageAttachments) {
+                    const imageUrl = `${serviceBaseUrl}/${objectId}/attachments/${imageInfo.id}`;
+                    const imgElement = document.createElement('img');
+                    imgElement.src = imageUrl;
+                    imgElement.className = 'report-image'; /* Use custom CSS for sizing */
+                    imgElement.alt = imageInfo.name || 'Report Image';
+                    imgElement.setAttribute('crossOrigin', 'anonymous');
+                    imageContainer.appendChild(imgElement);
+                    imageLoadPromises.push(new Promise(resolve => {
+                        imgElement.onload = resolve;
+                        imgElement.onerror = resolve; 
+                    }));
+                }
+                await Promise.all(imageLoadPromises); // Wait for all images to load in this report
+            } else {
+                imageContainer.innerHTML = "<small>No image attachments found for this report.</small>";
+            }
+        } catch (err) {
+            console.error(`Failed to load image for OID ${objectId}:`, err);
+            imageContainer.innerHTML = `<small>Error loading image.</small>`;
+        }
+    }
+    
+    function delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function generateAndZipPDFs(reportCardIds) {
+      if (reportCardIds.length === 0) {
+        showStatus("No reports selected for export.", "warning");
+        return;
+      }
+
+      showLoading(true);
+      showStatus(`Starting PDF generation for ${reportCardIds.length} reports... This may take a while.`, "info");
+
+      const zip = new JSZip();
+      
+      // Invalidate maps and wait for images to be sure everything is rendered
+      activeMaps.forEach(map => { try { map.invalidateSize(); } catch(e){} } );
+      // Increased delay again to ensure all dynamic content is fully rendered before capture
+      await delay(2000); 
+
+      for (let i = 0; i < reportCardIds.length; i++) {
+        const reportElement = document.getElementById(reportCardIds[i]);
+        if (!reportElement) {
+            console.warn(`Report element with ID ${reportCardIds[i]} not found. Skipping.`);
+            continue;
+        }
+
+        const objectIdForFilename = reportElement.dataset.objectId || reportCardIds[i].replace('report-card-', '');
+
+        showStatus(`Generating PDF ${i + 1} of ${reportCardIds.length} (ID: ${objectIdForFilename})...`);
+
+        try {
+          // Capture the entire report card as one canvas
+          const canvas = await html2canvas(reportElement, {
+            useCORS: true, 
+            allowTaint: true, 
+            scale: 2, // Increased scale for better resolution in PDF
+            logging: false, 
+            backgroundColor: '#ffffff',
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: reportElement.scrollWidth,
+            windowHeight: reportElement.scrollHeight
+          });
+          const imgData = canvas.toDataURL('image/jpeg', 0.9); // Increased quality
+
+          const pdf = new jsPDF({
+            orientation: 'p',
+            unit: 'mm',
+            format: 'a4'
+          });
+
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = pdf.internal.pageSize.getHeight();
+          const margin = 15; 
+          
+          const imgReportWidth = canvas.width;
+          const imgReportHeight = canvas.height;
+          
+          // Calculate aspect ratio of the captured image
+          const aspectRatio = imgReportWidth / imgReportHeight;
+          
+          // Calculate max content height per page
+          const maxPageContentHeight = pdfHeight - (2 * margin);
+
+          // If the captured content is taller than a single page, paginate
+          if (imgReportHeight / (imgReportWidth / (pdfWidth - (2 * margin))) > maxPageContentHeight) {
+              // Calculate segment height for each page in canvas pixels
+              const segmentHeightPx = (maxPageContentHeight / (pdfWidth - (2 * margin))) * imgReportWidth;
+              let yOffset = 0;
+
+              while (yOffset < imgReportHeight) {
+                  // Create a temporary canvas for the current segment
+                  const segmentCanvas = document.createElement('canvas');
+                  segmentCanvas.width = imgReportWidth;
+                  segmentCanvas.height = Math.min(segmentHeightPx, imgReportHeight - yOffset);
+                  const segmentContext = segmentCanvas.getContext('2d');
+                  
+                  // Draw the relevant portion of the original canvas onto the segment canvas
+                  segmentContext.drawImage(canvas, 
+                                            0, yOffset, imgReportWidth, segmentCanvas.height, // Source
+                                            0, 0, imgReportWidth, segmentCanvas.height); // Destination
+
+                  const segmentImgData = segmentCanvas.toDataURL('image/jpeg', 0.9);
+
+                  if (yOffset > 0) { // Add new page if not the first segment
+                      pdf.addPage();
+                  }
+
+                  // Add the segment image to the PDF
+                  const finalSegmentWidth = pdfWidth - (2 * margin);
+                  const finalSegmentHeight = finalSegmentWidth / (segmentCanvas.width / segmentCanvas.height);
+                  pdf.addImage(segmentImgData, 'JPEG', margin, margin, finalSegmentWidth, finalSegmentHeight);
+                  
+                  yOffset += segmentHeightPx;
+              }
+          } else {
+              // If content fits on one page, add it normally
+              let finalImgWidth = pdfWidth - (2 * margin);
+              let finalImgHeight = finalImgWidth / aspectRatio;
+
+              // Ensure it doesn't exceed page height even if it fits width
+              if (finalImgHeight > maxPageContentHeight) {
+                 finalImgHeight = maxPageContentHeight;
+                 finalImgWidth = finalImgHeight * aspectRatio;
+              }
+              
+              const xPos = (pdfWidth - finalImgWidth) / 2;
+              pdf.addImage(imgData, 'JPEG', xPos, margin, finalImgWidth, finalImgHeight);
+          }
+          
+          const filename = `KP_Report_${objectIdForFilename}.pdf`;
+          const pdfOutput = pdf.output('arraybuffer');
+          zip.file(filename, pdfOutput);
+          
+        } catch (pdfError) {
+            console.error(`Error generating PDF for report ${i+1} (ID: ${objectIdForFilename}):`, pdfError);
+            showStatus(`Error generating PDF for report ${i+1}. Continuing with next report...`, "warning");
+            await delay(200);
+        }
+      }
+      
+      try {
+          showStatus("Generating zip file of all PDFs...");
+          const zipBlob = await zip.generateAsync({type: 'blob'});
+          
+          const downloadLink = document.createElement('a');
+          downloadLink.href = URL.createObjectURL(zipBlob);
+          downloadLink.download = `KP_Reports_${new Date().toISOString().slice(0,10)}.zip`;
+          document.body.appendChild(downloadLink);
+          downloadLink.click();
+          document.body.removeChild(downloadLink);
+          
+          showStatus("PDF export completed successfully!", "success");
+      } catch (zipError) {
+          console.error("Error creating zip file:", zipError);
+          showStatus("Error creating zip file of PDFs.", "danger");
+      } finally {
+          showLoading(false);
+      }
+    }
+
+    console.log("Report Generator script loaded successfully!");
+  </script>
+</body>
+</html>
