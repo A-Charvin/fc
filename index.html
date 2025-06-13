@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Frontenac Civic & Road Finder</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(to right, #e0eafc, #cfdef3);
+    color: #333;
+    min-height: 100vh;
+    /* Add padding to body to prevent panel from overlapping scrollbar if it's at very edge */
+    padding: 20px; 
+  }
+  .container {
+    max-width: 700px;
+    margin: 0 auto; /* Centered, panel will be outside this */
+    padding: 30px 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    position: relative; /* For context if needed, though panel is fixed */
+  }
+  h1 {
+    font-weight: 700;
+    margin-bottom: 30px;
+    text-align: center;
+    color: #184d47;
+    position: relative;
+    padding-bottom: 10px;
+  }
+  h1::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    height: 3px;
+    width: 60px;
+    background-color: #184d47;
+    border-radius: 5px;
+  }
+  .form-control {
+    border-radius: 0.5rem;
+    border: 1px solid #ced4da;
+    padding: 0.75rem 1rem;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.075);
+  }
+  .form-control:focus {
+    border-color: #184d47;
+    box-shadow: 0 0 0 0.25rem rgba(24, 77, 71, 0.25);
+  }
+  .btn-primary {
+    background-color: #184d47;
+    border-color: #184d47;
+    padding: 0.75rem 1.5rem;
+    font-size: 1.1rem;
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+  }
+  .btn-primary:hover {
+    background-color: #113833;
+    border-color: #113833;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(24, 77, 71, 0.3);
+  }
+
+  /* Results Section Styling */
+  #results .card {
+    margin-bottom: 1.5rem;
+    background-color: #ffffff;
+    border: none;
+    border-left: 6px solid #184d47;
+    border-radius: 0.75rem;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease-in-out;
+  }
+  #results .card:hover {
+    transform: translateY(-5px);
+  }
+  #results .card .card-body { padding: 1.5rem; }
+  #results .card-title {
+    color: #184d47;
+    font-weight: 700;
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+  }
+  #results .card-text strong {
+    color: #184d47;
+    font-weight: 600;
+  }
+  #results .badge {
+    padding: 0.5em 0.8em;
+    border-radius: 0.35rem;
+    font-size: 0.85em;
+    font-weight: 600;
+  }
+  .badge.bg-success { background-color: #28a745 !important; }
+  .badge.bg-warning { background-color: #ffc107 !important; color: #333 !important; }
+  .badge.bg-info { background-color: #17a2b8 !important; color: #fff !important; }
+  .badge.bg-secondary { background-color: #6c757d !important; }
+
+  /* Map and Footer */
+  #map {
+    height: 400px;
+    width: 100%;
+    margin-top: 30px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    display: none;
+    border: 1px solid #dee2e6;
+  }
+  .footer {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #777;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+  }
+
+  .toggle-arrow {
+    cursor: pointer;
+    font-size: 1.1em;
+    color: #184d47;
+    margin-right: 8px;
+    user-select: none;
+  }
+  .toggle-arrow.active {
+    color: #FF6347;
+    font-weight: bold;
+  }
+
+  #external-address-panel {
+    position: fixed;
+    /* top, left, right will be set by JS */
+    width: 300px; 
+    max-height: 75vh;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    z-index: 1050;
+    display: none; 
+    flex-direction: column;
+  }
+  #external-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: #f7f7f7;
+    border-bottom: 1px solid #ddd;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+  }
+  #external-panel-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0;
+    color: #184d47;
+  }
+  #close-external-panel {
+    background: none;
+    border: none;
+    font-size: 1.6rem;
+    font-weight: normal;
+    color: #888;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+  }
+  #close-external-panel:hover {
+    color: #333;
+  }
+  #external-panel-content {
+    padding: 15px;
+    overflow-y: auto;
+    flex-grow: 1;
+    font-size: 0.88em;
+  }
+  #external-panel-content p {
+      margin-bottom: 0.3rem;
+  }
+  .custom-civic-marker { /* For temporary map markers */
+    font-size: 1.5rem; /* Adjust emoji size */
+    color: #E53935; /* A distinct color, e.g., red */
+    text-shadow: 1px 1px 2px white; /* improve visibility */
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>Frontenac Civic & Road Finder</h1>
+    <div class="input-group mb-3">
+        <input
+            type="text"
+            id="search"
+            class="form-control"
+            placeholder="Enter road name or full address (e.g., 123 Main St, County Rd 1)"
+            oninput="autoSuggest()"
+            list="suggestions"
+            autocomplete="off"
+        />
+        <button class="btn btn-primary" type="button" onclick="performSearch()">
+            Search
+        </button>
+    </div>
+    <datalist id="suggestions"></datalist>
+
+    <div id="results" class="mt-4"></div>
+    <div id="map"></div>
+
+    <div class="footer">Made with ❤️ in Frontenac</div>
+  </div>
+
+  <div id="external-address-panel">
+    <div id="external-panel-header">
+        <h5 id="external-panel-title">Associated Addresses</h5>
+        <button id="close-external-panel" type="button" title="Close">&times;</button>
+    </div>
+    <div id="external-panel-content"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
+  <script>
+    const NAD83_18N = "+proj=utm +zone=18 +datum=NAD83 +units=m +no_defs";
+    const WGS84 = "+proj=longlat +datum=WGS84 +no_defs";
+
+    let roads = [];
+    let civicAddresses = [];
+    let map;
+    let currentlyActiveArrow = null;
+    let tempCivicMarkersGroup = null; // For temporary markers on map
+
+    const roadColors = [
+      '#FF6347', '#6A5ACD', '#3CB371', '#FFD700', '#FF8C00',
+      '#1E90FF', '#EE82EE', '#00CED1', '#FF4500', '#20B2AA',
+      '#8A2BE2', '#D2691E', '#DC143C', '#008B8B'
+    ];
+
+    async function fetchAllFeatures(url, max = 1000) { /* ... (same) ... */ 
+      let allFeatures = [], offset = 0, done = false;
+      while (!done) {
+        const response = await fetch(`${url}&resultOffset=${offset}&resultRecordCount=${max}`);
+        const data = await response.json();
+        allFeatures = allFeatures.concat(data.features);
+        if (!data.exceededTransferLimit) done = true;
+        else offset += max;
+      }
+      return allFeatures;
+    }
+    async function loadData() { /* ... (same) ... */ 
+      document.getElementById('results').innerHTML = '<p class="text-muted text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div> Loading data, please wait...</p>';
+      try {
+        roads = await fetchAllFeatures(
+          "https://services2.arcgis.com/vJlmDE1PmdTcJF0N/arcgis/rest/services/Frontenac_Road_Nework_View/FeatureServer/0/query?where=1%3D1&outFields=*&f=json"
+        );
+        civicAddresses = await fetchAllFeatures(
+          "https://services2.arcgis.com/vJlmDE1PmdTcJF0N/arcgis/rest/services/Civic_Address_Points_View_2/FeatureServer/0/query?where=1%3D1&outFields=*&f=json"
+        );
+        document.getElementById('results').innerHTML = '<p class="text-success text-center">Data loaded. You may now search!</p>';
+      } catch (error) {
+        console.error("Error loading data:", error);
+        document.getElementById('results').innerHTML = '<p class="text-danger text-center">Failed to load data. Please try again later.</p>';
+      }
+    }
+    function autoSuggest() { /* ... (same) ... */ 
+      const input = document.getElementById('search').value.toUpperCase();
+      const datalist = document.getElementById('suggestions');
+      datalist.innerHTML = '';
+      const uniqueSuggestions = new Set();
+
+      civicAddresses.forEach(addr => {
+        const a = addr.attributes;
+        const fullAddress = `${a.StreetNumber} ${a.StreetName || ''}`.toUpperCase().trim();
+        if (fullAddress.includes(input) && fullAddress !== '') uniqueSuggestions.add(fullAddress);
+      });
+
+      roads.forEach(road => {
+        const a = road.attributes;
+        const fullRoadName = (a.NAME_FULL || '').toUpperCase().trim();
+        if (fullRoadName.includes(input) && fullRoadName !== '') uniqueSuggestions.add(fullRoadName);
+      });
+
+      Array.from(uniqueSuggestions).slice(0, 10).forEach(suggestion => {
+        const option = document.createElement('option');
+        option.value = suggestion;
+        datalist.appendChild(option);
+      });
+    }
+    function calculateParity(num) { /* ... (same) ... */ 
+      if (num === null || num === undefined || isNaN(parseInt(num))) return 'N/A';
+      return parseInt(num) % 2 === 0 ? 'Even' : 'Odd';
+    }
+    function reprojectCoord(x, y) { /* ... (same) ... */ 
+      try {
+        return proj4(NAD83_18N, WGS84, [x, y]);
+      } catch (e) {
+        console.error("Proj4js re-projection error:", e, "Input:", x, y);
+        return [NaN, NaN];
+      }
+    }
+    function getAddressesForSegmentSide(segmentAttributes, streetName, side) { /* ... (same) ... */ 
+        const relevantAddresses = [];
+        if (!segmentAttributes || !streetName) return relevantAddresses;
+
+        const segmentStreetNameUpper = streetName.toUpperCase();
+        let fromAddr, toAddr, segmentRangeStartNum;
+
+        if (side === 'L') {
+            fromAddr = segmentAttributes.F_ADDR_L_911;
+            toAddr = segmentAttributes.T_ADDR_L_911;
+            segmentRangeStartNum = segmentAttributes.F_ADDR_L_911;
+        } else { // side === 'R'
+            fromAddr = segmentAttributes.F_ADDR_R_911;
+            toAddr = segmentAttributes.T_ADDR_R_911;
+            segmentRangeStartNum = segmentAttributes.F_ADDR_R_911;
+        }
+
+        if (fromAddr == null || toAddr == null || segmentRangeStartNum == null) {
+            return []; 
+        }
+        
+        const expectedParity = calculateParity(segmentRangeStartNum);
+        if (expectedParity === 'N/A') {
+            return []; 
+        }
+
+        const minAddr = Math.min(parseInt(fromAddr), parseInt(toAddr));
+        const maxAddr = Math.max(parseInt(fromAddr), parseInt(toAddr));
+
+        civicAddresses.forEach(addr => {
+            const civicAttr = addr.attributes;
+            if (civicAttr.StreetName?.toUpperCase() === segmentStreetNameUpper) {
+                const civicNum = parseInt(civicAttr.StreetNumber);
+                if (!isNaN(civicNum) && civicNum >= minAddr && civicNum <= maxAddr) {
+                    if (calculateParity(civicNum) === expectedParity) {
+                        relevantAddresses.push(addr);
+                    }
+                }
+            }
+        });
+        relevantAddresses.sort((a, b) => (a.attributes.StreetNumber || 0) - (b.attributes.StreetNumber || 0));
+        return relevantAddresses;
+    }
+
+    function clearTemporaryMapMarkers() {
+        if (tempCivicMarkersGroup) {
+            tempCivicMarkersGroup.clearLayers();
+        }
+    }
+
+    function toggleAddressList(segmentObjectId, side, clickedArrowElement) {
+        const externalPanel = document.getElementById('external-address-panel');
+        const panelTitle = document.getElementById('external-panel-title');
+        const panelContent = document.getElementById('external-panel-content');
+        const panelMarginFromEdge = 20; // px, gap from viewport edge
+        const panelWidth = externalPanel.offsetWidth || 300; // Use actual or default width
+
+        clearTemporaryMapMarkers();
+
+        if (currentlyActiveArrow === clickedArrowElement && externalPanel.style.display === 'flex') {
+            externalPanel.style.display = 'none';
+            panelContent.innerHTML = '';
+            clickedArrowElement.classList.remove('active');
+            clickedArrowElement.innerHTML = '▶';
+            currentlyActiveArrow = null;
+            return;
+        }
+
+        if (currentlyActiveArrow && currentlyActiveArrow !== clickedArrowElement) {
+            currentlyActiveArrow.classList.remove('active');
+            currentlyActiveArrow.innerHTML = '▶';
+        }
+
+        const segment = roads.find(r => r.attributes.OBJECTID == segmentObjectId);
+        if (!segment) {
+            console.error("Segment not found for OBJECTID:", segmentObjectId);
+            panelTitle.textContent = "Error";
+            panelContent.innerHTML = '<p class="text-danger">Error: Segment data not found.</p>';
+            // Position and show even for error
+            const arrowRect = clickedArrowElement.getBoundingClientRect();
+            externalPanel.style.top = Math.max(panelMarginFromEdge, arrowRect.top) + 'px';
+            if (side === 'L') {
+                externalPanel.style.left = panelMarginFromEdge + 'px';
+                externalPanel.style.right = 'auto';
+            } else {
+                externalPanel.style.right = panelMarginFromEdge + 'px';
+                externalPanel.style.left = 'auto';
+            }
+            externalPanel.style.display = 'flex';
+            clickedArrowElement.classList.add('active');
+            clickedArrowElement.innerHTML = '▼';
+            currentlyActiveArrow = clickedArrowElement;
+            return;
+        }
+
+        const addresses = getAddressesForSegmentSide(segment.attributes, segment.attributes.NAME_FULL, side);
+        const sideText = side === 'L' ? 'Left Side' : 'Right Side';
+        const roadName = segment.attributes.NAME_FULL || 'Unknown Road';
+        panelTitle.textContent = `${roadName} - ${sideText}`;
+
+        if (addresses.length > 0) {
+            panelContent.innerHTML = addresses.map(addr =>
+                `<p><small>${addr.attributes.StreetNumber} ${addr.attributes.StreetName || ''} </small></p>`
+            ).join('');
+
+            if (tempCivicMarkersGroup && map) { // Add markers to map
+                addresses.forEach(addr => {
+                    if (addr.geometry && addr.geometry.x != null && addr.geometry.y != null) {
+                        const [lon, lat] = reprojectCoord(addr.geometry.x, addr.geometry.y);
+                        if (!isNaN(lat) && !isNaN(lon)) {
+                            L.marker([lat, lon], {
+                                icon: L.divIcon({
+                                    className: 'custom-civic-marker',
+                                    html: '📍', // Simple pin emoji
+                                    iconSize: [24, 24],
+                                    iconAnchor: [12, 24] // Anchor at bottom center of pin
+                                })
+                            })
+                            .bindPopup(`Civic: ${addr.attributes.StreetNumber} ${addr.attributes.StreetName || ''}`)
+                            .addTo(tempCivicMarkersGroup);
+                        }
+                    }
+                });
+            }
+        } else {
+            panelContent.innerHTML = '<p class="text-muted"><small>No matching civic addresses found.</small></p>';
+        }
+        
+        // Position and display panel
+        const arrowRect = clickedArrowElement.getBoundingClientRect();
+        let panelTop = Math.max(panelMarginFromEdge, arrowRect.top);
+        // Adjust if panel would go off bottom of screen
+        if (panelTop + externalPanel.offsetHeight > window.innerHeight - panelMarginFromEdge) {
+            panelTop = Math.max(panelMarginFromEdge, window.innerHeight - externalPanel.offsetHeight - panelMarginFromEdge);
+        }
+        externalPanel.style.top = panelTop + 'px';
+
+        if (side === 'L') {
+            externalPanel.style.left = panelMarginFromEdge + 'px';
+            externalPanel.style.right = 'auto';
+        } else { // 'R'
+            externalPanel.style.right = panelMarginFromEdge + 'px';
+            externalPanel.style.left = 'auto';
+        }
+
+        externalPanel.style.display = 'flex';
+        clickedArrowElement.classList.add('active');
+        clickedArrowElement.innerHTML = '▼';
+        currentlyActiveArrow = clickedArrowElement;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const closeButton = document.getElementById('close-external-panel');
+        const externalPanel = document.getElementById('external-address-panel');
+        if (closeButton && externalPanel) {
+            closeButton.onclick = () => {
+                externalPanel.style.display = 'none';
+                document.getElementById('external-panel-content').innerHTML = '';
+                if (currentlyActiveArrow) {
+                    currentlyActiveArrow.classList.remove('active');
+                    currentlyActiveArrow.innerHTML = '▶';
+                    currentlyActiveArrow = null;
+                }
+                clearTemporaryMapMarkers();
+            };
+        }
+    });
+
+    function performSearch() {
+      // ... (existing query, resultsDiv, mapDiv setup) ...
+      const query = document.getElementById('search').value.trim();
+      const resultsDiv = document.getElementById('results');
+      const mapDiv = document.getElementById('map');
+      resultsDiv.innerHTML = '';
+      mapDiv.style.display = 'none';
+
+
+      const externalPanel = document.getElementById('external-address-panel');
+      if (externalPanel) externalPanel.style.display = 'none';
+      if (currentlyActiveArrow) {
+          currentlyActiveArrow.classList.remove('active');
+          currentlyActiveArrow.innerHTML = '▶';
+          currentlyActiveArrow = null;
+      }
+      clearTemporaryMapMarkers(); // Clear markers on new search
+
+      if (!query) { /* ... (same) ... */ 
+        resultsDiv.innerHTML = '<p class="text-danger text-center">Please enter a road name or full address.</p>';
+        return;
+      }
+
+      const isAddress = /^\d+\s+.+/.test(query);
+      let streetNumber = null;
+      let streetName = query.toUpperCase();
+
+      if (isAddress) {
+        const parts = query.match(/^(\d+)\s+(.*)$/);
+        streetNumber = parseInt(parts[1]);
+        streetName = parts[2].toUpperCase();
+
+        const address = civicAddresses.find(addr => {
+          const a = addr.attributes;
+          return a.StreetNumber === streetNumber && a.StreetName?.toUpperCase() === streetName;
+        });
+
+        if (!address) {
+          resultsDiv.innerHTML = '<p class="text-warning text-center">No matching civic address found. Try searching by road name only.</p>';
+          return;
+        }
+
+        const matchingRoads = roads.filter(road => road.attributes.NAME_FULL?.toUpperCase() === streetName);
+
+        const matchedSegments = matchingRoads.filter(r => {
+          const a = r.attributes;
+          const inLeftRange =
+            a.F_ADDR_L_911 != null && a.T_ADDR_L_911 != null &&
+            streetNumber >= Math.min(a.F_ADDR_L_911, a.T_ADDR_L_911) && streetNumber <= Math.max(a.F_ADDR_L_911, a.T_ADDR_L_911) &&
+            calculateParity(streetNumber) === calculateParity(a.F_ADDR_L_911);
+          const inRightRange =
+            a.F_ADDR_R_911 != null && a.T_ADDR_R_911 != null &&
+            streetNumber >= Math.min(a.F_ADDR_R_911, a.T_ADDR_R_911) && streetNumber <= Math.max(a.F_ADDR_R_911, a.T_ADDR_R_911) &&
+            calculateParity(streetNumber) === calculateParity(a.F_ADDR_R_911);
+          return inLeftRange || inRightRange;
+        });
+
+        if (!matchedSegments.length) {
+          resultsDiv.innerHTML = `<p class="text-info text-center">Address point found, but no matching road segment for ${streetNumber} ${streetName} with correct address range and parity.</p>`;
+          showMap(address, []);
+          return;
+        }
+
+        // For address search, we don't need extensive sorting or color coding per segment if only one is found
+        // If multiple segments match an address, they are likely part of the same road, but let's assign a color
+        // just in case and to prepare for future enhancements.
+
+        matchedSegments.forEach((seg, index) => {
+            seg.displayColor = roadColors[index % roadColors.length];
+        });
+
+        resultsDiv.innerHTML = `<h4 class="mb-3 text-center">Results for ${query}</h4>` + matchedSegments.map(r => {
+            const a = r.attributes;
+            const parityLeft = calculateParity(a.F_ADDR_L_911);
+            const parityRight = calculateParity(a.F_ADDR_R_911);
+            const segmentColor = r.displayColor; // Use the assigned color
+            return `
+                <div class="card mb-3 shadow-sm" style="border-left: 6px solid ${segmentColor};">
+                <div class="card-body">
+                    <h5 class="card-title" style="color: ${segmentColor};">${a.NAME_FULL || 'Unknown Street'} (ID: ${a.OBJECTID})</h5>
+                    <p class="card-text mb-1"><strong>Civic Address Point Location:</strong> ${address.attributes.Location || 'N/A'}</p>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <div class="d-flex align-items-center mb-1">
+                                <span class="toggle-arrow" onclick="toggleAddressList(${a.OBJECTID}, 'L', this)">▶</span>
+                                <h6>Left Side Address Range</h6>
+                            </div>
+                            <p class="mb-1 ms-4">From: <strong>${a.F_ADDR_L_911 ?? 'N/A'}</strong></p>
+                            <p class="mb-1 ms-4">To: <strong>${a.T_ADDR_L_911 ?? 'N/A'}</strong></p>
+                            <p class="mb-0 ms-4">Calculated Parity: <span class="badge ${parityLeft === 'Even' ? 'bg-success' : parityLeft === 'Odd' ? 'bg-warning text-dark' : 'bg-secondary'}">${parityLeft}</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center mb-1">
+                                <span class="toggle-arrow" onclick="toggleAddressList(${a.OBJECTID}, 'R', this)">▶</span>
+                                <h6>Right Side Address Range</h6>
+                            </div>
+                            <p class="mb-1 ms-4">From: <strong>${a.F_ADDR_R_911 ?? 'N/A'}</strong></p>
+                            <p class="mb-1 ms-4">To: <strong>${a.T_ADDR_R_911 ?? 'N/A'}</strong></p>
+                            <p class="mb-0 ms-4">Calculated Parity: <span class="badge ${parityRight === 'Even' ? 'bg-success' : parityRight === 'Odd' ? 'bg-warning text-dark' : 'bg-secondary'}">${parityRight}</span></p>
+                        </div>
+                    </div>
+                    <hr>
+                    <p class="mb-0 text-end"><small class="text-muted">Segment Parity (Field): <span class="badge bg-secondary">${a.PARITY || 'N/A'}</span></small></p>
+                </div>
+                </div>
+            `;
+        }).join('');
+        showMap(address, matchedSegments);
+
+      } else { 
+        // Road name only search
+        let matchingRoads = roads.filter(road => { // Use let because we'll reassign after sorting
+          const a = road.attributes;
+          return a.NAME_FULL?.toUpperCase().includes(streetName);
+        });
+
+        if (!matchingRoads.length) {
+          resultsDiv.innerHTML = '<p class="text-warning text-center">No road segments found with that name.</p>';
+          return;
+        }
+        // Sort the matching roads by the lowest address range (F_ADDR_L_911 primarily)
+        matchingRoads.sort((a, b) => { 
+            const valA = a.attributes.F_ADDR_L_911 ?? (a.attributes.F_ADDR_R_911 ?? Infinity); // Use R if L is null, default to Infinity
+            const valB = b.attributes.F_ADDR_L_911 ?? (b.attributes.F_ADDR_R_911 ?? Infinity);
+            // Handle cases where both are null/NaN, or one is
+            if (valA === Infinity && valB === Infinity) return 0; // Both are effectively "N/A"
+            if (valA === Infinity) return 1; // A is "N/A", push to end
+            if (valB === Infinity) return -1; // B is "N/A", push to end
+            return valA - valB;
+        });
+
+        // Assign colors based on sorted order
+        matchingRoads.forEach((seg, index) => {
+            seg.displayColor = roadColors[index % roadColors.length];
+        });
+        
+        // Group roads by name for a cleaner display if multiple segments exist (though sorted within name)
+        const groupedRoads = matchingRoads.reduce((acc, road) => {
+            const name = road.attributes.NAME_FULL || 'Unknown Road';
+            if (!acc[name]) acc[name] = [];
+            acc[name].push(road);
+            return acc;
+        }, {});
+
+        resultsDiv.innerHTML = `<h4 class="mb-3 text-center">Results for "${query}"</h4>` + Object.keys(groupedRoads).map(roadNameKey => {
+            const segments = groupedRoads[roadNameKey];
+            return `
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">${roadNameKey}</h5>
+                        ${segments.map(seg => {
+                            const a = seg.attributes;
+                            const parityLeft = calculateParity(a.F_ADDR_L_911);
+                            const parityRight = calculateParity(a.F_ADDR_R_911);
+                            const segmentColor = seg.displayColor; // Use the assigned color
+                            return `
+                                <div class="mb-3 p-3 bg-light rounded" style="border-left: 5px solid ${segmentColor};">
+                                    <h6 style="color: ${segmentColor};">Segment Details (ID: ${a.OBJECTID})</h6>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3 mb-md-0">
+                                            <div class="d-flex align-items-center mb-1">
+                                                <span class="toggle-arrow" onclick="toggleAddressList(${a.OBJECTID}, 'L', this)">▶</span>
+                                                <h6>Left Side Range</h6>
+                                            </div>
+                                            <p class="mb-1 ms-4">From: <strong>${a.F_ADDR_L_911 ?? 'N/A'}</strong></p>
+                                            <p class="mb-1 ms-4">To: <strong>${a.T_ADDR_L_911 ?? 'N/A'}</strong></p>
+                                            <p class="mb-0 ms-4">Calculated Parity: <span class="badge ${parityLeft === 'Even' ? 'bg-success' : parityLeft === 'Odd' ? 'bg-warning text-dark' : 'bg-secondary'}">${parityLeft}</span></p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="d-flex align-items-center mb-1">
+                                                <span class="toggle-arrow" onclick="toggleAddressList(${a.OBJECTID}, 'R', this)">▶</span>
+                                                <h6>Right Side Range</h6>
+                                            </div>
+                                            <p class="mb-1 ms-4">From: <strong>${a.F_ADDR_R_911 ?? 'N/A'}</strong></p>
+                                            <p class="mb-1 ms-4">To: <strong>${a.T_ADDR_R_911 ?? 'N/A'}</strong></p>
+                                            <p class="mb-0 ms-4">Calculated Parity: <span class="badge ${parityRight === 'Even' ? 'bg-success' : parityRight === 'Odd' ? 'bg-warning text-dark' : 'bg-secondary'}">${parityRight}</span></p>
+                                        </div>
+                                    </div>
+                                    <p class="mt-2 mb-0 text-end"><small class="text-muted">Segment Parity (Field): <span class="badge bg-secondary">${a.PARITY || 'N/A'}</span></small></p>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        showMap(null, matchingRoads); // Pass the sorted and color-assigned roads to showMap
+      }
+    }
+
+    function showMap(address, roadSegments) {
+      const mapDiv = document.getElementById('map');
+      mapDiv.style.display = 'block';
+
+      if (map) {
+        // Clear temporary civic markers if map is being re-initialized
+        // though ideally tempCivicMarkersGroup is globally managed and just cleared
+        map.remove();
+      }
+      map = L.map('map').setView([44.3, -76.4], 10);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(map);
+
+      // Initialize or re-add the temporary markers group to the new map instance
+      if (tempCivicMarkersGroup && map.hasLayer(tempCivicMarkersGroup)) {
+          tempCivicMarkersGroup.clearLayers(); // Clear old markers if any
+      } else {
+          tempCivicMarkersGroup = L.featureGroup().addTo(map);
+      }
+
+
+      const featuresGroup = L.featureGroup().addTo(map); // For road segments and main address
+
+      if (address && address.geometry && address.geometry.x != null && address.geometry.y != null) {
+        // (same logic for main address marker)
+        const [lon, lat] = reprojectCoord(address.geometry.x, address.geometry.y);
+        if (!isNaN(lat) && !isNaN(lon)) {
+            L.marker([lat, lon])
+              .bindPopup(`<b>Civic Address</b><br>${address.attributes.Location || 'N/A'}`)
+              .openPopup()
+              .addTo(featuresGroup);
+        } else {
+            console.warn("Skipping address marker due to reprojection error.", address.geometry);
+        }
+      }
+
+      roadSegments.forEach((seg) => { /* (same logic for road segment polylines)  */ 
+        const geom = seg.geometry;
+        const segmentColor = seg.displayColor || '#0d6efd';
+        if (geom && geom.paths && geom.paths.length) {
+          geom.paths.forEach((path) => {
+            const latlngs = path.map(pt => {
+              const [lon, lat] = reprojectCoord(pt[0], pt[1]);
+              return (isNaN(lat) || isNaN(lon)) ? null : [lat, lon];
+            }).filter(p => p !== null);
+
+            if (latlngs.length > 0) {
+              L.polyline(latlngs, { color: segmentColor, weight: 5, opacity: 0.8, dashArray: '5, 5' })
+                .bindPopup(`<b>Segment:</b> ${seg.attributes.NAME_FULL || 'Unknown'}<br>L: ${seg.attributes.F_ADDR_L_911 ?? 'N/A'}-${seg.attributes.T_ADDR_L_911 ?? 'N/A'}<br>R: ${seg.attributes.F_ADDR_R_911 ?? 'N/A'}-${seg.attributes.T_ADDR_R_911 ?? 'N/A'}`)
+                .addTo(featuresGroup);
+            }
+          });
+        }
+      });
+
+      if (featuresGroup.getLayers().length > 0) { /* (same logic for fitting bounds)  */ 
+        try {
+          const bounds = featuresGroup.getBounds();
+          if (bounds.isValid()) {
+            map.fitBounds(bounds.pad(0.2));
+          } else { map.setView([44.3, -76.4], 10); }
+        } catch (e) {
+          console.error("Error fitting bounds:", e);
+          map.setView([44.3, -76.4], 10);
+        }
+      } else if (!tempCivicMarkersGroup || tempCivicMarkersGroup.getLayers().length === 0) {
+         // Only set default view if no main features AND no temp civic markers are present
+        map.setView([44.3, -76.4], 10);
+      }
+    }
+    window.onload = loadData;
+  </script>
+</body>
+</html>
