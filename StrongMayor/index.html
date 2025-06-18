@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ontario Strong Mayor Municipalities</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Rubik:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: 'Rubik', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8f9fb, #dfefff);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        header {
+            padding: 3rem 1rem 1rem;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        header p {
+            font-size: 1.25rem;
+            color: #5c6b7a;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        #map {
+            height: 65vh;
+            width: 100%;
+            border-radius: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e3e3e3;
+        }
+
+        .message-box {
+            padding: 1rem;
+            border-radius: 0.75rem;
+            font-weight: 500;
+            margin: 2rem 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #loading {
+            background-color: #e6f7ff;
+            color: #3388ff;
+        }
+
+        #error-message {
+            background-color: #fff5f5;
+            color: #dc3545;
+        }
+
+        .about-section {
+            background-color: #ffffff;
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-top: 3rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        }
+
+        .about-section h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #2d3e50;
+        }
+
+        .about-section p,
+        .about-section li {
+            color: #5d6d7e;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .about-section a {
+            color: #0d6efd;
+            text-decoration: none;
+        }
+        .about-section a:hover {
+            text-decoration: underline;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem 1rem;
+            font-size: 0.95rem;
+            color: #7d8a98;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Municipalities with Strong Mayor Powers in Ontario</h1>
+        <p>Explore the map below to discover which Ontario municipalities have been granted Strong Mayor authority by the provincial government.</p>
+    </header>
+
+    <main class="content">
+        <div id="loading" class="message-box">
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            Loading map data... This might take a moment.
+        </div>
+        <div id="error-message" class="message-box d-none">
+            <!-- Error message injected via JS -->
+        </div>
+
+        <div id="map"></div>
+
+        <div class="about-section">
+            <h3>About Strong Mayor Powers</h3>
+            <p>Strong Mayor Powers in Ontario are legislative tools provided by the province to selected municipalities. These tools aim to accelerate housing construction and streamline decision-making processes. They are part of Ontario's broader strategy to meet aggressive housing targets and improve infrastructure delivery.</p>
+            <ul>
+                <li>Appoint and dismiss senior staff including CAOs and commissioners.</li>
+                <li>Table and propose the municipal budget directly.</li>
+                <li>Veto certain bylaws, subject to override by council supermajority.</li>
+            </ul>
+            <p>These powers are typically granted to municipalities meeting specific population and housing target criteria, emphasizing development and growth priorities.</p>
+            <p>For further reading and official details, see these resources:</p>
+            <ul>
+                <li><a href="https://news.ontario.ca/en/backgrounder/1005753/strong-mayor-powers-proposed-for-169-additional-municipalities" target="_blank" rel="noopener">Ontario Backgrounder: Strong Mayor Powers for 169 Municipalities</a></li>
+                <li><a href="https://www.ontario.ca/document/ontario-municipal-councillors-guide/10-strong-mayor-powers-and-duties" target="_blank" rel="noopener">Ontario Government - Strong Mayor Powers Explained</a></li>
+                <li><a href="https://www.ontario.ca/laws/statute/01m25" target="_blank" rel="noopener">Municipal Act, 2001</a></li>
+            </ul>
+        </div>
+    </main>
+
+    <footer>
+        &copy; 2025 Ontario Civic Data Explorer. Contains information licensed under the <a href="https://www.ontario.ca/page/open-government-licence-ontario" target="_blank" rel="noopener">Open Government Licence – Ontario</a>.<br>
+        Made with ❤️ in Frontenac County using Leaflet and Bootstrap.
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script>
+        const geoJsonFileUrl = "smmuni.geojson";
+
+        window.onload = async function () {
+            const loadingDiv = document.getElementById('loading');
+            const errorDiv = document.getElementById('error-message');
+
+            if (typeof L === 'undefined') {
+                errorDiv.textContent = 'Leaflet failed to load. Please check your internet connection.';
+                errorDiv.classList.remove('d-none');
+                loadingDiv.classList.add('d-none');
+                return;
+            }
+
+            const map = L.map('map').setView([49.5, -85.0], 5);
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+
+            try {
+                const response = await fetch(geoJsonFileUrl);
+                if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+
+                const data = await response.json();
+
+                if (!data.features || !data.features.length) {
+                    throw new Error('GeoJSON file is empty or invalid');
+                }
+
+                L.geoJson(data, {
+                    style: {
+                        fillColor: '#ef4444',
+                        weight: 2,
+                        opacity: 1,
+                        color: 'white',
+                        dashArray: '3',
+                        fillOpacity: 0.7
+                    },
+                    onEachFeature: (feature, layer) => {
+                        if (feature.properties && feature.properties.MUNICIPAL_NAME) {
+                            layer.bindPopup(`<b>${feature.properties.MUNICIPAL_NAME}</b><br>Strong Mayor Powers`);
+                        }
+                    }
+                }).addTo(map);
+
+                loadingDiv.classList.add('d-none');
+            } catch (error) {
+                errorDiv.textContent = `Failed to load data: ${error.message}`;
+                errorDiv.classList.remove('d-none');
+                loadingDiv.classList.add('d-none');
+            }
+        }
+    </script>
+</body>
+</html>
