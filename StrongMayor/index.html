@@ -142,14 +142,14 @@
     </main>
 
     <footer>
-        &copy; 2025 Ontario Civic Data Explorer. Contains information licensed under the <a href="https://www.ontario.ca/page/open-government-licence-ontario" target="_blank" rel="noopener">Open Government Licence – Ontario</a>.<br>
+        Contains information licensed under the <a href="https://www.ontario.ca/page/open-government-licence-ontario" target="_blank" rel="noopener">Open Government Licence – Ontario</a>.<br>
         Made with ❤️ in Frontenac County using Leaflet and Bootstrap.
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
     <script>
-        const geoJsonFileUrl = "smmuni.geojson";
+        const geoJsonFileUrl = 'smmuni.geojson.gz';
 
         window.onload = async function () {
             const loadingDiv = document.getElementById('loading');
@@ -172,9 +172,9 @@
 
             try {
                 const response = await fetch(geoJsonFileUrl);
-                if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-
-                const data = await response.json();
+                const buffer = await response.arrayBuffer();
+                const decompressed = new TextDecoder("utf-8").decode(pako.ungzip(new Uint8Array(buffer)));
+                const data = JSON.parse(decompressed);
 
                 if (!data.features || !data.features.length) {
                     throw new Error('GeoJSON file is empty or invalid');
@@ -204,5 +204,6 @@
             }
         }
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
 </body>
 </html>
