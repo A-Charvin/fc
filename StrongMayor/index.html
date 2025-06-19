@@ -98,6 +98,14 @@
             text-decoration: underline;
         }
 
+        #municipality-count {
+            margin-top: 1rem;
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #34495e;
+            text-align: center;
+        }
+
         footer {
             text-align: center;
             padding: 2rem 1rem;
@@ -110,6 +118,7 @@
     <header>
         <h1>Municipalities with Strong Mayor Powers in Ontario</h1>
         <p>Explore the map below to discover which Ontario municipalities have been granted Strong Mayor authority by the provincial government.</p>
+        <div id="municipality-count">Total Municipalities with Strong Mayor Powers: 215 (May 1, 2025)</div>
     </header>
 
     <main class="content">
@@ -117,10 +126,7 @@
             <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
             Loading map data... This might take a moment.
         </div>
-        <div id="error-message" class="message-box d-none">
-            <!-- Error message injected via JS -->
-        </div>
-
+        <div id="error-message" class="message-box d-none"></div>
         <div id="map"></div>
 
         <div class="about-section">
