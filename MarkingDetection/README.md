@@ -26,7 +26,7 @@ Along the way, we:
 * Optimized processing to save time without losing accuracy
 * Learned that sometimes “thrown together” experiments can yield production-ready workflows
 
-Special thanks go to my team at FrontenacGIS for making this possible.
+Special thanks to our team at FrontenacGIS for making this possible.
 
 ---
 
