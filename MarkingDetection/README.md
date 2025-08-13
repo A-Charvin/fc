@@ -49,6 +49,7 @@ Special thanks to our team at FrontenacGIS for making this possible.
 │       │   ├── best.pt
 │       ├── V2/
 │           ├── best.pt
+├── requirements.txt
 ```
 
 ---
