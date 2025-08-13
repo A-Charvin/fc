@@ -1,0 +1,8 @@
+Pillow
+numpy
+pyproj
+rasterio
+geopandas
+sahi
+ultralytics
+matplotlib
