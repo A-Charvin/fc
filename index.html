@@ -1,190 +1,253 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frontenac County GIS Tools</title>
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        /* General Body & Typography */
-        body {
-            font-family: 'Open Sans', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f0f2f5; /* Light grey background */
-            color: #333;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh; /* Ensures footer is always at the bottom */
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Frontenac County GIS Tools</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/feather-icons"></script>
+  <style>
+    :root {
+      --primary: #16a34a;       /* Frontenac green */
+      --primary-dark: #166534;  /* Deep green */
+      --bg: #f9fafb;
+      --card-bg: #ffffff;
+      --text-dark: #111827;
+      --text-muted: #6b7280;
+      --radius: 14px;
+      --shadow: 0 6px 20px rgba(0,0,0,0.08);
+    }
 
-        /* Header Section */
-        header {
-            background-color: #2c3e50; /* Dark blue/grey */
-            color: white;
-            padding: 40px 20px;
-            text-align: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        header h1 {
-            margin: 0 0 10px 0;
-            font-size: 3em;
-            font-weight: 700;
-        }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text-dark);
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
 
-        header p {
-            font-size: 1.1em;
-            max-width: 700px;
-            margin: 0 auto;
-            line-height: 1.6;
-            opacity: 0.9;
-        }
+    /* Header / Hero */
+    header {
+      position: relative;
+      overflow: hidden;
+      color: white;
+      text-align: center;
+      padding: 80px 20px 120px;
+    }
 
-        /* Main Content Container */
-        .container {
-            flex-grow: 1;
-            max-width: 960px;
-            margin: 50px auto;
-            padding: 30px 40px;
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
-        }
+    /* Animated gradient background */
+    header::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(270deg, var(--primary), var(--primary-dark), #22c55e, var(--primary));
+      background-size: 800% 800%;
+      animation: gradientMove 25s ease infinite;
+      z-index: 0;
+    }
+    @keyframes gradientMove {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
 
-        .container h2 {
-            text-align: center;
-            color: #2c3e50;
-            font-size: 2em;
-            margin-bottom: 40px;
-            position: relative;
-            padding-bottom: 10px;
-        }
+    /* Particle effect */
+    .particles {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      overflow: hidden;
+      z-index: 1;
+    }
+    .particle {
+      position: absolute;
+      bottom: -150px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 50%;
+      animation: rise 20s linear infinite;
+    }
+    @keyframes rise {
+      0% { transform: translateY(0) scale(1); opacity: 0; }
+      20% { opacity: 1; }
+      100% { transform: translateY(-120vh) scale(1.5); opacity: 0; }
+    }
 
-        .container h2::after {
-            content: '';
-            position: absolute;
-            left: 50%;
-            bottom: 0;
-            transform: translateX(-50%);
-            width: 80px;
-            height: 3px;
-            background-color: #3498db; /* Blue accent */
-            border-radius: 2px;
-        }
+    header img {
+      height: 90px;
+      margin-bottom: 25px;
+      position: relative;
+      z-index: 2;
+    }
+    header h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 15px;
+      position: relative;
+      z-index: 2;
+    }
+    header p {
+      font-size: 1.2rem;
+      max-width: 720px;
+      margin: 0 auto;
+      opacity: 0.95;
+      position: relative;
+      z-index: 2;
+    }
 
-        /* Tool List Styling */
-        .tool-list {
-            list-style: none;
-            padding: 0;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Responsive grid */
-            gap: 25px; /* Space between grid items */
-        }
+    /* Decorative Wave */
+    .wave {
+      position: absolute;
+      bottom: 0; left: 0;
+      width: 100%; height: 120px;
+      overflow: hidden; line-height: 0;
+      z-index: 2;
+    }
+    .wave svg {
+      display: block;
+      width: calc(120% + 1.3px);
+      height: 120px;
+    }
+    .wave path { fill: var(--bg); }
 
-        .tool-list li {
-            background-color: #ffffff;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 25px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            display: flex;
-            flex-direction: column;
-        }
+    /* Container */
+    .container {
+      flex-grow: 1;
+      max-width: 1100px;
+      margin: 50px auto;
+      padding: 0 20px;
+    }
+    .container h2 {
+      text-align: center;
+      font-size: 2.2rem;
+      margin-bottom: 45px;
+      color: var(--primary-dark);
+      font-weight: 700;
+    }
 
-        .tool-list li:hover {
-            transform: translateY(-5px); /* Lift effect on hover */
-            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-        }
+    /* Tool List */
+    .tool-list {
+      list-style: none;
+      display: grid;
+      gap: 30px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+    .tool-list li {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 35px 25px;
+      box-shadow: var(--shadow);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .tool-list li:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 12px 30px rgba(22, 101, 52, 0.25);
+    }
+    .tool-list a {
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 1.25rem;
+      margin: 12px 0;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .tool-list a:hover { color: var(--primary-dark); }
+    .tool-list i { width: 22px; height: 22px; }
+    .tool-list p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      flex-grow: 1;
+    }
 
-        .tool-list a {
-            text-decoration: none;
-            color: #3498db; /* Blue for links */
-            font-weight: 600;
-            font-size: 1.3em;
-            margin-bottom: 10px;
-            display: block; /* Makes the whole link block-level */
-        }
+    /* Footer */
+    footer {
+      background: #111827;
+      color: #e5e7eb;
+      text-align: center;
+      padding: 40px 20px;
+      margin-top: auto;
+    }
+    footer img {
+      height: 50px;
+      margin-bottom: 15px;
+    }
+    footer span {
+      display: block;
+      margin-top: 6px;
+      font-size: 0.85rem;
+      color: #9ca3af;
+    }
 
-        .tool-list a:hover {
-            color: #2980b9; /* Darker blue on hover */
-        }
-
-        .tool-list p {
-            margin-top: 0;
-            color: #666;
-            line-height: 1.5;
-            flex-grow: 1; /* Ensures descriptions take up available space */
-        }
-
-        /* Footer Section */
-        footer {
-            background-color: #2c3e50; /* Dark blue/grey */
-            color: #ecf0f1; /* Light text */
-            text-align: center;
-            padding: 25px 0;
-            margin-top: 50px;
-            font-size: 0.9em;
-            box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
-        }
-
-        footer span {
-            display: block;
-            margin-top: 8px;
-            font-size: 0.85em;
-            color: #bdc3c7;
-        }
-
-        /* Responsive Adjustments */
-        @media (max-width: 768px) {
-            header h1 {
-                font-size: 2.2em;
-            }
-            .container {
-                margin: 30px 20px;
-                padding: 25px;
-            }
-            .tool-list {
-                grid-template-columns: 1fr; /* Single column on smaller screens */
-            }
-        }
-    </style>
+    /* Mobile */
+    @media (max-width: 768px) {
+      header h1 { font-size: 2.2rem; }
+      header img { height: 70px; }
+      .container { margin: 30px auto; }
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>Frontenac County GIS Tools</h1>
-        <p>A collection of powerful Geographic Information System applications designed to serve the community of Frontenac County.</p>
-    </header>
-
-    <div class="container">
-        <h2>Explore Our Tools</h2>
-        <ul class="tool-list">
-            <li>
-                <a href="CivicSearch.html" target="_blank">Civic Address & Road Segment Search</a>
-                <p>Quickly find civic addresses or road names and view associated address details, road segments, and parity information.</p>
-            </li>
-            <li>
-                <a href="KPReportGen.html" target="_blank">K&P Trail Report Generator</a>
-                <p>Generate comprehensive reports for the K&P Trail, offering valuable insights and data for various sections and features.</p>
-            </li>
-            <li>
-                <a href="RoadSearch.html" target="_blank">Frontenac County Road Name Search</a>
-                <p>Efficiently search for and locate specific road names within the geographical bounds of Frontenac County.</p>
-            </li>
-            <li>
-                <a href="StrongMayor/index.html" target="_blank">Municipalities with Strong Mayor Powers</a>
-                <p>View a map of all municipalities in Ontario that have been granted strong mayor powers by the provincial government.</p>
-            </li>
-            <li>
-                <a href="https://github.com/A-Charvin/fc/tree/main/MarkingDetection" target="_blank">Road Marking Extraction & Detection</a>
-                <p>The repository containing scripts and info about our Pavement Marking Extraction & Detection, including YOLO object detection based data preparation, training, and detection scripts.</p>
-            </li>
-        </ul>
+  <header>
+    <!-- Particles -->
+    <div class="particles">
+      <div class="particle" style="width:40px; height:40px; left:10%; animation-duration:18s;"></div>
+      <div class="particle" style="width:25px; height:25px; left:30%; animation-duration:22s;"></div>
+      <div class="particle" style="width:15px; height:15px; left:50%; animation-duration:19s;"></div>
+      <div class="particle" style="width:35px; height:35px; left:70%; animation-duration:26s;"></div>
+      <div class="particle" style="width:20px; height:20px; left:85%; animation-duration:24s;"></div>
     </div>
 
-    <footer>
-        <span>Made with ❤️ in Frontenac County.</span>
-    </footer>
+    <img src="https://www.frontenaccounty.ca/en/images/structure/logo.svg" alt="Frontenac County Logo">
+    <h1>Frontenac County GIS Tools</h1>
+    <p>A collection of modern Geographic Information System applications serving the community of Frontenac County.</p>
+
+    <div class="wave">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
+        <path d="M321.39 56.44C235.68 75.29 146.36 95.58 55.39 109.59 22.37 114.73-8.95 118.12-39.85 120H1200V0c-58.36 31.61-131.2 53.54-209.59 68.38-91.65 17.13-186.74 22.58-279.59 13.95-95.5-8.86-187.23-32.66-279.43-44.16C391.73 29.34 355.32 41.48 321.39 56.44z"></path>
+      </svg>
+    </div>
+  </header>
+
+  <div class="container">
+    <h2>Explore Our Tools</h2>
+    <ul class="tool-list">
+      <li>
+        <a href="CivicSearch.html" target="_blank"><i data-feather="map-pin"></i> Civic Address & Road Segment Search</a>
+        <p>Find civic addresses or road names and view associated address details, road segments, and parity information.</p>
+      </li>
+      <li>
+        <a href="KPReportGen.html" target="_blank"><i data-feather="file-text"></i> K&P Trail Report Generator</a>
+        <p>Generate detailed reports for the K&P Trail with insights into sections and features.</p>
+      </li>
+      <li>
+        <a href="RoadSearch.html" target="_blank"><i data-feather="search"></i> Frontenac County Road Name Search</a>
+        <p>Locate specific road names within Frontenac County quickly and efficiently.</p>
+      </li>
+      <li>
+        <a href="StrongMayor/index.html" target="_blank"><i data-feather="layers"></i> Municipalities with Strong Mayor Powers</a>
+        <p>View a map of Ontario municipalities granted strong mayor powers by the provincial government.</p>
+      </li>
+      <li>
+        <a href="https://github.com/A-Charvin/fc/tree/main/MarkingDetection" target="_blank"><i data-feather="code"></i> Road Marking Extraction & Detection</a>
+        <p>Explore a repository with scripts and workflows for road marking extraction and YOLO-based detection.</p>
+      </li>
+    </ul>
+  </div>
+
+  <footer>
+    <img src="https://www.frontenaccounty.ca/en/images/structure/logo.svg" alt="Frontenac County Logo">
+    <div>Made with ❤️ in Frontenac County.</div>
+    <span>© 2025 Frontenac County GIS</span>
+  </footer>
+
+  <script>feather.replace()</script>
 </body>
 </html>
