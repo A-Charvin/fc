@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waterbody Whiz</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Varela+Round&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+
+    <style>
+        /* --- Dark Mode Theme Variables (VIOLET ACCENT) --- */
+        :root {
+            /* Primary Accent: Electric Violet (Accessible) */
+            --primary: #60c79c;
+            --primary-dark: #307756;
+
+            /* Background and Surface */
+            --bg: #121212;
+            --card-bg: #1E1E1E;
+            --input-bg: #2C2C2C;
+            --grid-bg: #3A3A3A;
+            --grid-border: #505050;
+
+            /* Text and Status */
+            --text-light: #fffdfd;
+            --text-muted: #d3cfcf;
+            --shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+
+            /* Game Status Colors */
+            --correct-color: #10B981;
+            /* Green */
+            --incorrect-color: #F87171;
+            /* Red */
+            --warning-color: #FBBF24;
+            /* Yellow */
+            --time-green: var(--correct-color);
+            --time-yellow: var(--warning-color);
+            --time-red: var(--incorrect-color);
+
+            --radius: 12px;
+        }
+
+        /* --- Basic/Reset CSS --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text-light);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 20px 0;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 550px;
+        }
+
+        #logo-container {
+            display: flex;
+            justify-content: center;
+            /* Centers the logo image */
+            margin-bottom: 15px;
+        }
+
+        #frontenac-logo {
+            max-width: 250px;
+            /* Control logo size */
+            height: auto;
+        }
+
+        h1 {
+            font-family: 'Varela Round', sans-serif;
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-weight: 800;
+            font-size: 2.8rem;
+            text-shadow: 0 0 5px rgba(167, 121, 233, 0.2);
+        }
+
+        #scoreboard,
+        #timer {
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        #scoreboard {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+        }
+
+        #timer {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--time-green);
+            transition: color 0.5s;
+        }
+
+        #timer i {
+            color: var(--primary);
+        }
+
+
+        /* --- Game Card --- */
+        .game-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 30px;
+            width: 100%;
+            max-width: 550px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        #lake-container {
+            width: 100%;
+            max-width: 350px;
+            min-height: 250px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--grid-border);
+            cursor: zoom-in;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        #lake-container:hover {
+            box-shadow: 0 0 10px rgba(167, 121, 233, 0.3);
+        }
+
+        #lake-img {
+            max-width: 100%;
+            max-height: 100%;
+            height: auto;
+            filter: invert(1) hue-rotate(180deg);
+            transition: transform 0.3s;
+        }
+
+        #lake-container:hover #lake-img {
+            transform: scale(1.05);
+        }
+
+        /* --- Input and Controls --- */
+        #current-guess-row {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 450px;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 10;
+        }
+
+        #guess-input {
+            padding: 12px 15px;
+            flex-grow: 1;
+            border: 2px solid var(--grid-border);
+            border-radius: 8px;
+            font-size: 16px;
+            background: var(--input-bg);
+            color: var(--text-light);
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        #guess-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 4px rgba(167, 121, 233, 0.3);
+        }
+
+        #submit-btn {
+            background-color: var(--primary-dark);
+            color: #FFFFFF;
+            flex-shrink: 0;
+            padding: 12px 18px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        #submit-btn:hover {
+            background-color: var(--primary);
+            box-shadow: 0 0 8px rgba(167, 121, 233, 0.4);
+        }
+
+        #submit-btn i {
+            color: #FFFFFF;
+        }
+
+        #suggestions {
+            position: absolute;
+            top: calc(100% + 5px);
+            left: 0;
+            width: calc(100% - 80px);
+            z-index: 15;
+            background: var(--card-bg);
+            border: 1px solid var(--primary);
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: var(--shadow);
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--grid-border);
+            transition: background-color 0.1s;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-item:hover,
+        .suggestion-item.selected {
+            background-color: #333333;
+            color: var(--primary);
+        }
+
+        /* --- Guess Grid --- */
+        #guess-grid {
+            display: grid;
+            grid-template-columns: 2.5fr 1.5fr 1fr;
+            gap: 5px;
+            width: 100%;
+            max-width: 450px;
+            margin-top: 15px;
+            border: 2px solid var(--primary-dark);
+            border-radius: var(--radius);
+            padding: 10px;
+            background-color: #161616;
+        }
+
+        .grid-header {
+            font-weight: 700;
+            text-align: center;
+            padding: 8px 5px;
+            color: var(--primary);
+            font-size: 0.9em;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--grid-border);
+        }
+
+        .guess-row {
+            display: contents;
+        }
+
+        .guess-cell {
+            background-color: var(--grid-bg);
+            border: 1px solid var(--grid-border);
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1em;
+            font-weight: 600;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            transition: background-color 0.5s, color 0.5s;
+        }
+
+        /* Proximity Coloring */
+        .proximity-100 {
+            background-color: var(--correct-color) !important;
+            color: #121212 !important;
+        }
+
+        .proximity-80 {
+            background-color: color-mix(in srgb, var(--correct-color) 40%, var(--grid-bg));
+        }
+
+        .proximity-60 {
+            background-color: color-mix(in srgb, var(--correct-color) 20%, var(--grid-bg));
+        }
+
+        .proximity-40 {
+            background-color: var(--warning-color) !important;
+            color: #121212 !important;
+        }
+
+        .proximity-20 {
+            background-color: color-mix(in srgb, var(--incorrect-color) 40%, var(--grid-bg));
+        }
+
+        .proximity-0 {
+            background-color: var(--grid-bg) !important;
+            color: var(--text-light);
+        }
+
+        /* Animation Classes */
+        .animate-pop {
+            animation: pop 0.3s ease-out;
+        }
+
+        @keyframes pop {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* --- Feedback and Controls --- */
+        #feedback {
+            margin-top: 20px;
+            font-size: 1.15em;
+            font-weight: 600;
+            min-height: 25px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-align: center;
+            width: 100%;
+            justify-content: center;
+            padding: 5px 0;
+        }
+
+        #feedback.correct {
+            color: var(--correct-color);
+            animation: flash-correct 0.5s ease-out;
+        }
+
+        #feedback i {
+            width: 24px;
+            height: 24px;
+        }
+
+        #feedback.revealed i {
+            color: var(--warning-color);
+        }
+
+        #feedback.correct i {
+            color: var(--correct-color);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 450px;
+            margin-top: 20px;
+        }
+
+        button {
+            /* General Button Styling for consistency */
+            flex-grow: 1;
+            padding: 12px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            display: flex;
+            /* FIX: Ensure vertical alignment of text and icon */
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            color: var(--text-light);
+        }
+
+        #reveal-btn {
+            background-color: #666;
+            color: #FFFFFF;
+        }
+
+        #reveal-btn:hover {
+            background-color: #777;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+        }
+
+        #reveal-btn i {
+            color: #FFFFFF;
+        }
+
+        #next-btn {
+            background-color: var(--primary-dark);
+            color: #FFFFFF;
+            font-weight: 700;
+            width: 100%;
+            max-width: 450px;
+            margin-top: 15px;
+        }
+
+        #next-btn:hover {
+            background-color: var(--primary);
+            box-shadow: 0 0 8px rgba(167, 121, 233, 0.4);
+        }
+
+        #next-btn i {
+            color: #FFFFFF;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+
+    <div id="logo-container" aria-hidden="true">
+      <img id="frontenac-logo" src="https://www.frontenaccounty.ca/en/images/structure/logo.svg" alt="Frontenac County Logo">
+    </div>
+        <h1>Waterbody Whiz</h1>
+        <div id="scoreboard">
+            <i data-feather="target" style="width: 20px; height: 20px; color: var(--primary);"></i>
+            Score: <span id="correct-score">0</span> / <span id="rounds-played">0</span> |
+            Streak: <span id="current-streak">0</span> (Max: <span id="max-streak">0</span>)
+        </div>
+        <div id="timer">
+            <i data-feather="clock"></i>
+            Time Left: <span id="time-display">45</span>s
+        </div>
+    </header>
+
+    <main class="game-card">
+
+        <div id="lake-container">
+            <img id="lake-img" src="" alt="Guess the lake silhouette" />
+        </div>
+
+        <div id="current-guess-row">
+            <input type="text" id="guess-input" placeholder="Type lake name here..." autocomplete="off">
+            <button id="submit-btn" title="Submit Guess">
+                <i data-feather="send"></i>
+            </button>
+            <div id="suggestions"></div>
+        </div>
+
+        <p id="feedback"></p>
+
+        <div id="guess-grid">
+            <div class="grid-header">Guess Name</div>
+            <div class="grid-header">Distance & Dir.</div>
+            <div class="grid-header">Proximity</div>
+        </div>
+
+        <div class="action-buttons">
+            <button id="reveal-btn" style="display: none;">
+                <i data-feather="help-circle"></i> Reveal Answer
+            </button>
+        </div>
+
+        <button id="next-btn" style="display: none;">
+            <i data-feather="refresh-ccw"></i> See Next Lake
+        </button>
+    </main>
+
+    <footer>
+        <div>Made with ❤️ in Frontenac County.</div>
+        <span>© 2025 Frontenac County GIS</span>
+    </footer>
+
+    <script>
+        /* --- Configuration & Constants --- */
+        const JSON_PATH = 'lake.json';
+        const IMAGE_DIR = 'images/';
+        const MAX_TIME = 120;
+        const MAX_GUESSES = 6;
+        const MAX_PROXIMITY_DISTANCE_KM = 130;
+
+        const DIRECTION_ARROWS = {
+            N: "⬆️", NNE: "↗️", NE: "↗️", ENE: "↗️", E: "➡️", ESE: "↘️", SE: "↘️",
+            SSE: "↘️", S: "⬇️", SSW: "↙️", SW: "↙️", WSW: "↙️", W: "⬅️", WNW: "↖️",
+            NW: "↖️", NNW: "↖️",
+        };
+
+        // --- Global State ---
+        let lakes = [];
+        let currentLake = null;
+        let availableLakes = [];
+        let guesses = [];
+        let correctGuesses = 0;
+        let roundsPlayed = 0;
+        let currentStreak = 0;
+        let maxStreak = 0;
+        let timerInterval = null;
+
+
+        // --- DOM Elements ---
+        const feedbackElement = document.getElementById('feedback');
+        const guessInput = document.getElementById('guess-input');
+        const submitButton = document.getElementById('submit-btn');
+        const nextButton = document.getElementById('next-btn');
+        const revealButton = document.getElementById('reveal-btn');
+        const guessGrid = document.getElementById('guess-grid');
+        const timeDisplay = document.getElementById('time-display');
+        const correctScoreSpan = document.getElementById('correct-score');
+        const roundsPlayedSpan = document.getElementById('rounds-played');
+        const currentStreakSpan = document.getElementById('current-streak');
+        const maxStreakSpan = document.getElementById('max-streak');
+        const suggestionsContainer = document.getElementById('suggestions');
+        let selectedSuggestionIndex = -1;
+
+        // --- Utility & Geographical Functions (Unchanged) ---
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+        function toRad(degrees) { return degrees * (Math.PI / 180); }
+        function toDeg(radians) { return radians * (180 / Math.PI); }
+        function utmToApproxLatLon(centroid) {
+            const FRONTENAC_CENTER = { lat: 44.57, lon: -76.35 };
+            const APPROX_CENTER_EASTING = 422000;
+            const APPROX_CENTER_NORTHING = 4945000;
+            const SCALE_LAT = 0.000009;
+            const SCALE_LON = 0.000014;
+            const deltaEasting = centroid[0] - APPROX_CENTER_EASTING;
+            const deltaNorthing = centroid[1] - APPROX_CENTER_NORTHING;
+            return {
+                lat: FRONTENAC_CENTER.lat + deltaNorthing * SCALE_LAT,
+                lon: FRONTENAC_CENTER.lon + deltaEasting * SCALE_LON,
+            };
+        }
+        function calculateDistance(coord1, coord2) {
+            const R = 6371;
+            const lat1 = toRad(coord1.lat);
+            const lon1 = toRad(coord1.lon);
+            const lat2 = toRad(coord2.lat);
+            const lon2 = toRad(coord2.lon);
+            const dLat = lat2 - lat1;
+            const dLon = lon2 - lon1;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1) * Math.cos(lat2) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+        function calculateBearing(coord1, coord2) {
+            const lat1 = toRad(coord1.lat);
+            const lon1 = toRad(coord1.lon);
+            const lat2 = toRad(coord2.lat);
+            const lon2 = toRad(coord2.lon);
+            const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+            const x = Math.cos(lat1) * Math.sin(lat2) -
+                Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+            let bearing = toDeg(Math.atan2(y, x));
+            return (bearing + 360) % 360;
+        }
+        function getDirectionArrow(bearing) {
+            if (bearing > 348.75 || bearing <= 11.25) return DIRECTION_ARROWS.N;
+            if (bearing > 11.25 && bearing <= 33.75) return DIRECTION_ARROWS.NNE;
+            if (bearing > 33.75 && bearing <= 56.25) return DIRECTION_ARROWS.NE;
+            if (bearing > 56.25 && bearing <= 78.75) return DIRECTION_ARROWS.ENE;
+            if (bearing > 78.75 && bearing <= 101.25) return DIRECTION_ARROWS.E;
+            if (bearing > 101.25 && bearing <= 123.75) return DIRECTION_ARROWS.ESE;
+            if (bearing > 123.75 && bearing <= 146.25) return DIRECTION_ARROWS.SE;
+            if (bearing > 146.25 && bearing <= 168.75) return DIRECTION_ARROWS.SSE;
+            if (bearing > 168.75 && bearing <= 191.25) return DIRECTION_ARROWS.S;
+            if (bearing > 191.25 && bearing <= 213.75) return DIRECTION_ARROWS.SSW;
+            if (bearing > 213.75 && bearing <= 236.25) return DIRECTION_ARROWS.SW;
+            if (bearing > 236.25 && bearing <= 258.75) return DIRECTION_ARROWS.WSW;
+            if (bearing > 258.75 && bearing <= 281.25) return DIRECTION_ARROWS.W;
+            if (bearing > 281.25 && bearing <= 303.75) return DIRECTION_ARROWS.WNW;
+            if (bearing > 303.75 && bearing <= 326.25) return DIRECTION_ARROWS.NW;
+            if (bearing > 326.25 && bearing <= 348.75) return DIRECTION_ARROWS.NNW;
+        }
+        function calculateProximity(distance) {
+            if (distance === 0) return 100;
+            if (distance >= MAX_PROXIMITY_DISTANCE_KM) return 0;
+            const inverseProximity = distance / MAX_PROXIMITY_DISTANCE_KM;
+            const proximity = 100 - (inverseProximity * 100);
+            return Math.floor(proximity);
+        }
+        function getProximityClass(proximity) {
+            if (proximity === 100) return 'proximity-100';
+            if (proximity >= 80) return 'proximity-80';
+            if (proximity >= 60) return 'proximity-60';
+            if (proximity >= 40) return 'proximity-40';
+            if (proximity >= 20) return 'proximity-20';
+            return 'proximity-0';
+        }
+
+        // --- Game Flow Functions ---
+        function updateScoreboard() {
+            correctScoreSpan.textContent = correctGuesses;
+            roundsPlayedSpan.textContent = roundsPlayed;
+            currentStreakSpan.textContent = currentStreak;
+            maxStreakSpan.textContent = maxStreak;
+            localStorage.setItem('maxStreak', maxStreak);
+            localStorage.setItem('correctGuesses', correctGuesses);
+        }
+        function loadScores() {
+            maxStreak = parseInt(localStorage.getItem('maxStreak') || 0);
+            correctGuesses = parseInt(localStorage.getItem('correctGuesses') || 0);
+            updateScoreboard();
+        }
+        function initGame() {
+            loadScores();
+            fetch(JSON_PATH)
+                .then(response => response.json())
+                .then(data => {
+                    lakes = data.map(lake => ({
+                        ...lake,
+                        coords: utmToApproxLatLon(lake.centroid)
+                    }));
+                    if (lakes.length > 0) {
+                        shuffleArray(lakes);
+                        availableLakes = [...lakes];
+                        startGame();
+                    } else {
+                        feedbackElement.innerHTML = '⚠️ Error: No lake data found in JSON.';
+                    }
+                })
+                .catch(error => {
+                    feedbackElement.innerHTML = `⚠️ Error loading data: Check if '${JSON_PATH}' exists.`;
+                    console.error('Fetch error:', error);
+                });
+        }
+        function startGame() {
+            if (availableLakes.length === 0) {
+                shuffleArray(lakes);
+                availableLakes = [...lakes];
+            }
+            guesses = [];
+            guessInput.value = '';
+            feedbackElement.textContent = '';
+            feedbackElement.className = '';
+            submitButton.style.display = 'flex';
+            nextButton.style.display = 'none';
+            revealButton.style.display = 'none';
+            guessInput.disabled = false;
+            guessInput.focus();
+            hideSuggestions();
+            renderGuessGrid();
+            currentLake = availableLakes.pop();
+            document.getElementById('lake-img').src = `${IMAGE_DIR}${currentLake.file}`;
+            document.getElementById('lake-img').alt = `Silhouette for ${currentLake.name}`;
+            startTimer();
+            updateScoreboard();
+            if (typeof feather !== 'undefined') feather.replace();
+        }
+        function endGame(isCorrect) {
+            stopTimer();
+            roundsPlayed++;
+            guessInput.disabled = true;
+            submitButton.style.display = 'none';
+            nextButton.style.display = 'block';
+            revealButton.style.display = 'none';
+            hideSuggestions();
+            if (isCorrect) {
+                correctGuesses++;
+                currentStreak++;
+                if (currentStreak > maxStreak) {
+                    maxStreak = currentStreak;
+                }
+            } else {
+                currentStreak = 0;
+            }
+            updateScoreboard();
+        }
+        function renderGuessGrid() {
+            let existingRows = guessGrid.querySelectorAll('.guess-row');
+            existingRows.forEach(row => row.remove());
+
+            guesses.forEach(guess => {
+                const row = document.createElement('div');
+                row.className = 'guess-row';
+
+                let cellName = document.createElement('div');
+                cellName.className = 'guess-cell';
+                cellName.textContent = guess.name.toUpperCase();
+                row.appendChild(cellName);
+
+                let cellDistance = document.createElement('div');
+                cellDistance.className = 'guess-cell';
+                if (guess.distance === 0) {
+                    cellDistance.innerHTML = `🎉 0 km`;
+                } else {
+                    const directionArrow = getDirectionArrow(guess.bearing);
+                    cellDistance.innerHTML = `${Math.round(guess.distance)} km ${directionArrow}`;
+                }
+                row.appendChild(cellDistance);
+
+                let cellProximity = document.createElement('div');
+                cellProximity.className = `guess-cell animate-pop ${getProximityClass(guess.proximity)}`;
+                cellProximity.textContent = `${guess.proximity}%`;
+                row.appendChild(cellProximity);
+
+                guessGrid.appendChild(row);
+            });
+
+            for (let i = guesses.length; i < MAX_GUESSES; i++) {
+                const row = document.createElement('div');
+                row.className = 'guess-row';
+                for (let j = 0; j < 3; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'guess-cell';
+                    cell.style.backgroundColor = 'var(--grid-bg)';
+                    row.appendChild(cell);
+                }
+                guessGrid.appendChild(row);
+            }
+        }
+
+        function processGuess(guessedLakeName) {
+            if (!currentLake || guessInput.disabled) return;
+
+            const normalizedGuess = guessedLakeName.toLowerCase();
+
+            // 1. Check if the guess was already made
+            const alreadyGuessed = guesses.some(g => g.name.toLowerCase() === normalizedGuess);
+            if (alreadyGuessed) {
+                feedbackElement.innerHTML = `<i data-feather="alert-triangle"></i> You already guessed ${guessedLakeName}. Try a different lake.`;
+                feedbackElement.className = 'revealed';
+                guessInput.value = '';
+                if (typeof feather !== 'undefined') feather.replace();
+                return;
+            }
+
+            // 2. Find the lake data
+            const guessedLake = lakes.find(lake =>
+                lake.name.toLowerCase() === normalizedGuess
+            );
+
+            if (!guessedLake) {
+                feedbackElement.innerHTML = `<i data-feather="alert-triangle"></i> Could not find ${guessedLakeName}. Try again.`;
+                feedbackElement.className = 'revealed';
+                guessInput.value = '';
+                if (typeof feather !== 'undefined') feather.replace();
+                return;
+            }
+
+            // 3. Calculate metrics
+            const targetCoords = currentLake.coords;
+            const guessCoords = guessedLake.coords;
+            const distance = calculateDistance(targetCoords, guessCoords);
+            const bearing = calculateBearing(targetCoords, guessCoords);
+            const proximity = calculateProximity(distance);
+
+            const guess = {
+                name: guessedLake.name,
+                distance: distance,
+                bearing: bearing,
+                proximity: proximity,
+            };
+            guesses.push(guess);
+            renderGuessGrid();
+
+            if (distance === 0 || guesses.length === MAX_GUESSES) {
+                const isCorrect = distance === 0;
+                if (isCorrect) {
+                    feedbackElement.innerHTML = `<i data-feather="check-circle"></i> CORRECT! You got it in ${guesses.length} guesses!`;
+                    feedbackElement.className = 'correct';
+                } else {
+                    feedbackElement.innerHTML = `<i data-feather="frown"></i> Out of guesses. The answer was: ${currentLake.name}`;
+                    feedbackElement.className = 'revealed';
+                    revealButton.style.display = 'none';
+                }
+                endGame(isCorrect);
+            } else {
+                feedbackElement.textContent = ``;
+                guessInput.value = '';
+                guessInput.focus();
+                revealButton.style.display = 'inline-block';
+            }
+            if (typeof feather !== 'undefined') feather.replace();
+        }
+
+        function checkGuess() {
+            const guess = guessInput.value.trim();
+            if (guess) {
+                processGuess(guess);
+            }
+        }
+
+        function revealAnswer() {
+            feedbackElement.innerHTML = `<i data-feather="alert-triangle"></i> The correct answer was: ${currentLake.name}`;
+            feedbackElement.className = 'revealed';
+            endGame(false);
+        }
+
+        // --- Timer Functions ---
+        function startTimer() {
+            clearInterval(timerInterval);
+            let timeLeft = MAX_TIME;
+            timeDisplay.textContent = timeLeft;
+            timeDisplay.parentElement.style.color = 'var(--time-green)';
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timeDisplay.textContent = timeLeft;
+
+                if (timeLeft <= 15 && timeLeft > 5) {
+                    timeDisplay.parentElement.style.color = 'var(--time-yellow)';
+                } else if (timeLeft <= 5) {
+                    timeDisplay.parentElement.style.color = 'var(--time-red)';
+                }
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    feedbackElement.innerHTML = `<i data-feather="frown"></i> Time's up! The answer was: ${currentLake.name}`;
+                    feedbackElement.className = 'revealed';
+                    endGame(false);
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+        }
+
+        // --- Autocomplete Logic ---
+        function getSuggestions(query) {
+            const normalizedQuery = query.toLowerCase();
+            return lakes
+                .filter(lake => lake.name.toLowerCase().includes(normalizedQuery))
+                .slice(0, 8);
+        }
+        function showSuggestions() {
+            const query = guessInput.value.trim();
+            suggestionsContainer.innerHTML = '';
+            selectedSuggestionIndex = -1;
+
+            if (query.length < 2) {
+                hideSuggestions();
+                return;
+            }
+            const suggestions = getSuggestions(query);
+
+            if (suggestions.length === 0) {
+                hideSuggestions();
+                return;
+            }
+            suggestions.forEach((lake, index) => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.textContent = lake.name;
+                item.dataset.index = index;
+                item.addEventListener('click', () => {
+                    guessInput.value = lake.name;
+                    hideSuggestions();
+                    checkGuess();
+                });
+                suggestionsContainer.appendChild(item);
+            });
+            suggestionsContainer.style.display = 'block';
+        }
+
+        function hideSuggestions() {
+            suggestionsContainer.style.display = 'none';
+            suggestionsContainer.innerHTML = '';
+            selectedSuggestionIndex = -1;
+        }
+
+        function selectSuggestion(index) {
+            const items = Array.from(suggestionsContainer.children);
+            items.forEach(item => item.classList.remove('selected'));
+            if (index >= 0 && index < items.length) {
+                items[index].classList.add('selected');
+                selectedSuggestionIndex = index;
+                guessInput.value = items[index].textContent;
+            }
+        }
+
+
+        // --- Event Listeners ---
+        guessInput.addEventListener('input', showSuggestions);
+
+        guessInput.addEventListener('keydown', (event) => {
+            const items = Array.from(suggestionsContainer.children);
+
+            if (items.length > 0) {
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    selectSuggestion((selectedSuggestionIndex + 1) % items.length);
+                    return;
+                } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    selectSuggestion((selectedSuggestionIndex - 1 + items.length) % items.length);
+                    return;
+                }
+            }
+
+            if (event.key === 'Enter') {
+                if (suggestionsContainer.style.display === 'block' && selectedSuggestionIndex !== -1) {
+                    event.preventDefault();
+                    hideSuggestions();
+                    checkGuess();
+                } else if (submitButton.style.display !== 'none') {
+                    checkGuess();
+                }
+            } else if (event.key === 'Escape') {
+                hideSuggestions();
+                guessInput.blur();
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!document.getElementById('current-guess-row').contains(e.target)) {
+                hideSuggestions();
+            }
+        });
+
+        submitButton.addEventListener('click', checkGuess);
+        nextButton.addEventListener('click', startGame);
+        revealButton.addEventListener('click', revealAnswer);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // New security measure: Block right-click context menu on the image container
+            document.getElementById('lake-container').addEventListener('contextmenu', (e) => e.preventDefault());
+
+            initGame();
+            if (typeof feather !== 'undefined') feather.replace();
+        });
+    </script>
+</body>
+
+</html>
