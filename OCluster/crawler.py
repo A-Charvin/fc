@@ -1,48 +1,44 @@
 """
-ArcGIS Portal Content Dependency Extractor
-------------------------------------------
+ArcGIS Portal Content Dependency & Abandonment Auditor
+------------------------------------------------------
+This script performs a comprehensive audit of an ArcGIS Portal/Online instance.
+It identifies relationships between items using four distinct strategies and
+flags "Space Junk" (orphaned items) that have no incoming or outgoing links.
 
-This script connects to an ArcGIS Portal or ArcGIS Online instance and builds
-a dependency graph of content items such as:
-
-- Feature Services
-- Web Maps
-- Dashboards
-- Web Mapping Applications
-- Experience Builder apps
-
-Relationships are detected using two strategies:
-1. Explicit ArcGIS item relationships
-2. Deep JSON inspection to uncover implicit dependencies
-
-The output is a graph-friendly JSON file containing:
-- nodes: portal items
-- edges: dependencies between items
+Outputs a JSON file compatible with the 'Feature Galaxy' D3.js visualization.
 """
 
 from arcgis.gis import GIS
 import json
 import urllib3
+import logging
 
 # ------------------------------------------------------------------------------
-# Configuration
+# Configuration & Logging
 # ------------------------------------------------------------------------------
 
+# The filename for the visualization frontend
 OUTPUT_FILE = "content_graph.json"
-MAX_ITEMS = 5000   # Increase if your portal is very large
 
-# Suppress HTTPS warnings for internal or self-signed portals
+# Limits the number of items fetched to prevent timeouts on massive portals
+MAX_ITEMS = 5000   
+
+# Configure logging to both console and a logger object for audit trails
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# Suppress HTTPS warnings (common in internal enterprise environments)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# ------------------------------------------------------------------------------
-# Lightweight logging helpers
-# ------------------------------------------------------------------------------
-
 def ok(message):
+    """Prints and logs a success message."""
     print(f"[OK] {message}")
+    logger.info(message)
 
 def err(message):
+    """Prints and logs an error message."""
     print(f"[ERROR] {message}")
+    logger.error(message)
 
 # ------------------------------------------------------------------------------
 # GIS Connection
@@ -50,17 +46,8 @@ def err(message):
 
 def connect_to_gis():
     """
-    Establish a connection to the active ArcGIS environment.
-
-    Uses GIS("home"), which works automatically in:
-    - ArcGIS Pro
-    - ArcGIS Notebooks
-    - Logged-in Python environments
-
-    Returns
-    -------
-    GIS
-        Authenticated GIS object
+    Establishes connection to ArcGIS Online or Enterprise.
+    'home' profile works automatically in Pro, Notebooks, or authenticated CLI.
     """
     try:
         gis = GIS("home")
@@ -74,61 +61,156 @@ def connect_to_gis():
 # Dependency Discovery Helpers
 # ------------------------------------------------------------------------------
 
-def extract_ids_from_dict(obj):
+def extract_ids_from_dict(obj, discovered=None):
     """
-    Recursively scan a nested dictionary or list and extract ArcGIS item IDs.
-
-    This is used to find implicit dependencies hidden inside JSON structures,
-    such as:
-    - Feature Services referenced in Web Maps
-    - Web Maps referenced in Apps or Dashboards
-
-    Parameters
-    ----------
-    obj : dict | list
-        JSON object returned by item.get_data()
-
-    Returns
-    -------
-    set[str]
-        Set of discovered ArcGIS item IDs
+    Recursively scans JSON objects for 32-character ArcGIS Item IDs.
+    
+    Args:
+        obj: The dictionary or list to scan (usually from item.get_data()).
+        discovered: A set to store found IDs (handles recursion).
+        
+    Returns:
+        A set of unique 32-character strings found within the JSON.
     """
-    discovered = set()
-
+    if discovered is None:
+        discovered = set()
+    
     if isinstance(obj, dict):
         for key, value in obj.items():
-            # ArcGIS commonly stores references using "itemId"
+            # Strategy: Look for the specific 'itemId' key used by Esri
             if key == "itemId" and isinstance(value, str) and len(value) == 32:
                 discovered.add(value)
+            # Strategy: Look for URLs that might contain item IDs (e.g., in popup configs)
+            elif key == "url" and isinstance(value, str):
+                item_id = extract_id_from_url(value)
+                if item_id:
+                    discovered.add(item_id)
             else:
-                discovered.update(extract_ids_from_dict(value))
-
+                extract_ids_from_dict(value, discovered)
     elif isinstance(obj, list):
         for element in obj:
-            discovered.update(extract_ids_from_dict(element))
-
+            extract_ids_from_dict(element, discovered)
+    
     return discovered
 
+def extract_id_from_url(url):
+    """Parses a URL string to find a 32-char ArcGIS Item ID."""
+    if not isinstance(url, str):
+        return None
+    
+    # Common pattern: /home/item.html?id=... or /items/{id}
+    if "/items/" in url:
+        parts = url.split("/items/")
+        if len(parts) > 1:
+            # Strip away potential trailing paths or query strings
+            item_id = parts[1].split("/")[0].split("?")[0]
+            if len(item_id) == 32:
+                return item_id
+    
+    return None
+
 # ------------------------------------------------------------------------------
-# Main Processing Logic
+# Relationship Mining Strategies
+# ------------------------------------------------------------------------------
+
+def get_forward_relationships(item):
+    """
+    Strategy A1: Explicit Forward Relationships.
+    Finds what this item 'points to' via the Portal API.
+    """
+    relationships = []
+    relationship_types = ["f2w", "w2m", "m2a", "Map2Service", "Service2Data"]
+    
+    for rel_type in relationship_types:
+        try:
+            related_items = item.related_items(rel_type, direction="forward")
+            for related in related_items:
+                relationships.append((item.id, related.id, f"forward_{rel_type}"))
+        except:
+            pass
+    return relationships
+
+def get_reverse_relationships(item):
+    """
+    Strategy A2: Explicit Reverse Relationships.
+    Finds what 'points to' this item (e.g., which App uses this Map).
+    """
+    relationships = []
+    relationship_types = ["f2w", "w2m", "m2a", "Map2Service", "Service2Data"]
+    
+    for rel_type in relationship_types:
+        try:
+            related_items = item.related_items(rel_type, direction="reverse")
+            for related in related_items:
+                relationships.append((related.id, item.id, f"reverse_{rel_type}"))
+        except:
+            pass
+    return relationships
+
+def get_dependencies(item):
+    """
+    Strategy A3: Native ArcGIS Dependency API.
+    Uses the built-in methods 'dependent_upon' and 'dependent_to'.
+    """
+    relationships = []
+    # Items this item needs to function
+    try:
+        for dep in item.dependent_upon():
+            if hasattr(dep, 'id'):
+                relationships.append((item.id, dep.id, "depends_on"))
+    except:
+        pass
+    # Items that need this item to function
+    try:
+        for dep in item.dependent_to():
+            if hasattr(dep, 'id'):
+                relationships.append((dep.id, item.id, "dependent_to"))
+    except:
+        pass
+    return relationships
+
+def extract_json_dependencies(item):
+    """
+    Strategy B: Deep JSON Inspection.
+    Crawls the underlying JSON of Maps and Apps to find hidden dependencies
+    that aren't formally registered in the Portal relationship database.
+    """
+    relationships = []
+    inspect_types = [
+        "Web Map", "Web Mapping Application", "Dashboard", 
+        "Experience Builder", "Feature Service"
+    ]
+    
+    try:
+        if any(item_type in item.type for item_type in inspect_types):
+            item_data = item.get_data()
+            if item_data:
+                referenced_ids = extract_ids_from_dict(item_data)
+                for ref_id in referenced_ids:
+                    if ref_id != item.id:
+                        relationships.append((item.id, ref_id, "json_reference"))
+    except:
+        pass
+    return relationships
+
+# ------------------------------------------------------------------------------
+# Main Audit Execution
 # ------------------------------------------------------------------------------
 
 def main():
     gis = connect_to_gis()
 
-    print("Fetching portal content...")
+    ok("Fetching portal content...")
     all_items = gis.content.search(query="", max_items=MAX_ITEMS)
 
-    # Node registry (id → metadata)
     nodes = {}
-
-    # Edge registry stored as tuples to prevent duplicates
     edges = set()
+    relationship_sources = {
+        "forward_relationships": 0, "reverse_relationships": 0,
+        "dependencies": 0, "json_references": 0
+    }
 
-    # ------------------------------------------------------------------
-    # Step 1: Register all items as nodes
-    # ------------------------------------------------------------------
-
+    # STEP 1: Inventory all content
     for item in all_items:
         nodes[item.id] = {
             "id": item.id,
@@ -136,102 +218,62 @@ def main():
             "type": item.type,
             "owner": item.owner,
             "views": item.numViews,
-            "access": item.access
+            "access": item.access,
+            "url": item.homepage,
+            "is_abandoned": True  # Assume junk until proven otherwise
         }
 
-    print(f"Analyzing dependencies across {len(all_items)} items...")
+    ok(f"Registered {len(all_items)} items. Beginning relationship analysis...")
 
-    # ------------------------------------------------------------------
-    # Step 2: Discover relationships
-    # ------------------------------------------------------------------
-
+    # STEP 2: Cross-reference every item using all strategies
     for index, item in enumerate(all_items):
         if index % 100 == 0:
             print(f" Progress: {index}/{len(all_items)}")
 
-        # --- Strategy A: Explicit ArcGIS relationships ---
-        try:
-            relationship_types = [
-                "f2w",          # Feature → Web Map
-                "w2m",          # Web Map → App
-                "m2a",
-                "Map2Service",
-                "Service2Data"
-            ]
+        # Combine results from all strategies
+        all_rels = (get_forward_relationships(item) + 
+                    get_reverse_relationships(item) + 
+                    get_dependencies(item) + 
+                    extract_json_dependencies(item))
 
-            for rel_type in relationship_types:
-                related_items = item.related_items(rel_type, direction="forward")
-                for related in related_items:
-                    edges.add((item.id, related.id))
+        for source, target, rel_type in all_rels:
+            # Only track edges between items that actually exist in our inventory
+            if source in nodes and target in nodes:
+                edges.add((source, target))
+                # Increment the specific counter for our final summary
+                key = [k for k in relationship_sources if k in rel_type]
+                if key: relationship_sources[key[0]] += 1
+                elif "json" in rel_type: relationship_sources["json_references"] += 1
+                elif "depends" in rel_type: relationship_sources["dependencies"] += 1
 
-        except Exception:
-            # Relationship types vary across portals and items
-            pass
-
-        # --- Strategy B: Deep JSON inspection ---
-        # This reveals dependencies ArcGIS does not expose as relationships
-        if item.type in [
-            "Web Map",
-            "Web Mapping Application",
-            "Dashboard",
-            "Experience Builder"
-        ]:
-            try:
-                item_data = item.get_data()
-                if not item_data:
-                    continue
-
-                referenced_ids = extract_ids_from_dict(item_data)
-
-                for ref_id in referenced_ids:
-                    if ref_id in nodes and ref_id != item.id:
-                        # Convention: referenced item → current item
-                        edges.add((ref_id, item.id))
-
-            except Exception:
-                pass
-
-    # ------------------------------------------------------------------
-    # Step 3: Filter graph to only connected content
-    # ------------------------------------------------------------------
-
+    # STEP 3: Identify the 'Space Junk'
     connected_ids = set()
     for source, target in edges:
         connected_ids.add(source)
         connected_ids.add(target)
 
-    final_nodes = [
-        nodes[item_id]
-        for item_id in connected_ids
-        if item_id in nodes
-    ]
+    abandoned_count = 0
+    for item_id in nodes:
+        if item_id in connected_ids:
+            nodes[item_id]["is_abandoned"] = False
+        else:
+            abandoned_count += 1
 
-    final_edges = [
-        {"source": source, "target": target}
-        for source, target in edges
-        if source in nodes and target in nodes
-    ]
-
-    # ------------------------------------------------------------------
-    # Step 4: Write output
-    # ------------------------------------------------------------------
-
+    # STEP 4: Save the Audit Graph
     graph = {
-        "nodes": final_nodes,
-        "edges": final_edges
+        "summary": {
+            "total_items": len(all_items),
+            "abandoned_count": abandoned_count,
+            "relationship_breakdown": relationship_sources
+        },
+        "nodes": list(nodes.values()),
+        "edges": [{"source": s, "target": t} for s, t in edges]
     }
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(graph, f, indent=2)
 
-    ok(f"Processed {len(all_items)} portal items")
-    ok(f"Discovered {len(final_nodes)} connected items")
-    ok(f"Captured {len(final_edges)} relationships")
-    ok(f"Graph saved to {OUTPUT_FILE}")
-
-# ------------------------------------------------------------------------------
-# Entry Point
-# ------------------------------------------------------------------------------
+    ok(f"Audit Complete. Graph saved to {OUTPUT_FILE}")
 
 if __name__ == "__main__":
     main()
