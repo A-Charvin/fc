@@ -1,8 +1,8 @@
-# AGOL Cluster Galaxy 🌌
+# AGOL Content Galaxy 🌌
 
-**A Deep-Dependency Visualization Tool for ArcGIS Online & Enterprise.**
+**Visualize and trace deep dependencies between ArcGIS Portal items, from Feature Layers to Apps.**
 
-AGOL Cluster solves the "where is this used?" problem. By crawling your Portal's internal JSON data, it maps relationships that the standard ArcGIS interface often misses—such as layers tucked inside Web Maps, which are then tucked inside Experience Builder apps.
+AGOL Content Galaxy solves the "where is this used?" problem. By crawling your portal's internal JSON, it maps relationships that the standard ArcGIS interface often misses—such as layers tucked inside Web Maps, which are then embedded in Experience Builder apps.
 
 ---
 
@@ -10,18 +10,16 @@ AGOL Cluster solves the "where is this used?" problem. By crawling your Portal's
 
 The project consists of two distinct components:
 
-1. **The Crawler (Python):** * Authenticates with your GIS.
-* Performs a recursive scan of all items.
-* Parses item data to find "hidden" dependencies.
-* Outputs a `content_graph.json` file.
+1. **The Crawler (`crawler.py`):**
+   - Authenticates with your GIS (ArcGIS Online or Enterprise).
+   - Performs a recursive scan of all items.
+   - Parses item JSON to find "hidden" dependencies.
+   - Outputs `content_graph.json` in the project folder.
 
-
-2. **The Galaxy (HTML5/D3.js):**
-* Reads the JSON file.
-* Renders a force-directed "Galaxy" of your assets.
-* Provides "Kinetic Analysis" to trace data lineage from Feature to App.
-
-
+2. **The Galaxy (`index.html`):**
+   - Loads `content_graph.json`.
+   - Renders an interactive force-directed "Galaxy" of your portal assets.
+   - Provides "Kinetic Lineage" to trace upstream and downstream dependencies.
 
 ---
 
@@ -78,12 +76,12 @@ Upload `index.html` and `content_graph.json` to any web server (IIS, GitHub Page
 
 ## 🎨 Visual Guide
 
-| Asset Type | Color | Description |
-| --- | --- | --- |
-| **Features** | 🟢 Green | The source of truth (Feature Layers/Services). |
-| **Web Maps** | 🔵 Blue | The containers that organize feature data. |
-| **Apps** | 🟣 Purple | End-user products (Dashboards, Experience Builder). |
-| **Other** | 🟡 Gold | Utilities, Notebooks, and orphaned files. |
+| Asset Type   | Color     | Type Examples                        |
+| ------------ | --------- | ------------------------------------ |
+| **Features** | 🟢 Green  | Feature Layers / Services            |
+| **Web Maps** | 🔵 Blue   | Maps organizing feature data         |
+| **Apps**     | 🟣 Purple | Dashboards, Experience Builder       |
+| **Other**    | 🟡 Gold   | Utilities, Notebooks, orphaned files |
 
 ---
 
