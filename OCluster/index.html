@@ -209,6 +209,62 @@
         .tooltip-count { font-size: 9px; color: var(--text-light); margin-top: 2px; }
         .node-group { cursor: pointer; pointer-events: all; transition: opacity 0.3s; }
         .node-circle { transition: r 0.3s, filter 0.3s; }
+
+        /* New Style for Abandoned Nodes */
+        /* Update the existing node-abandoned */
+        .node-abandoned {
+            stroke-dasharray: 5, 3;
+            stroke: #ef4444 !important; /* Sharp Red */
+            stroke-width: 6px !important;
+            filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.4));
+            animation: ghost-float 3s ease-in-out infinite;
+        }
+
+        @keyframes ghost-float {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.95); }
+        }
+
+        /* Add a tag for the Sidebar */
+        .abandoned-badge {
+            background: #ef4444;
+            color: white;
+            font-size: 9px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 900;
+            margin-left: 10px;
+            display: none; /* Hidden by default */
+        }
+
+        /* Style for the new View Button */
+        .view-arcgis-btn {
+            display: block;
+            width: 100%;
+            margin-top: 15px;
+            background: var(--f-neon) !important;
+            color: white !important;
+            text-align: center;
+            text-decoration: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: 900;
+            font-size: 11px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        .view-arcgis-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 242, 255, 0.4);
+        }
+        
+        .tree-link-icon {
+            margin-left: 8px;
+            text-decoration: none;
+            opacity: 0.6;
+        }
+    .tree-link-icon:hover { opacity: 1; }
+    
     </style>
 </head>
 <body>
@@ -255,23 +311,32 @@
     <div class="legend-item" onclick="filterByGroup('OTHER')">
         <div class="dot" style="background:var(--f-gold)"></div> Other
     </div>
+    <div class="legend-item" onclick="filterAbandoned()">
+        <div class="dot" style="border: 2px dashed #ef4444; background: transparent;"></div> Space Junk
+    </div>
     <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border);">
     <div class="legend-item" onclick="resetToGalaxy()" style="color: var(--f-neon); font-weight: 700;">
         ↻ Clear Filter
     </div>
 </div>
+
 <div id="hud-sidebar">
     <div class="sidebar-header">
         <div class="sidebar-label">Active Asset</div>
         <div id="active-asset" style="color: var(--f-neon);">Select Node</div>
+        
+        <a id="arcgis-link" href="#" target="_blank" class="view-arcgis-btn" style="display:none;">
+            🌐 View in ArcGIS Portal
+        </a>
+
         <div class="cluster-stats">
             <div class="stat-box">
                 <div class="stat-label">Connections</div>
                 <div class="stat-value" id="stat-connections">0</div>
             </div>
             <div class="stat-box">
-                <div class="stat-label">In Cluster</div>
-                <div class="stat-value" id="stat-cluster-size">0</div>
+                <div class="stat-label">Total Views</div>
+                <div class="stat-value" id="stat-views">0</div>
             </div>
         </div>
     </div>
@@ -360,7 +425,11 @@ d3.json("content_graph.json").then(data => {
     node.append("circle").attr("class", "node-circle")
         .attr("r", d => 22 + (getLinkCount(d.id) * 2.2))
         .attr("fill", d => getColorValue(d.type))
-        .style("stroke", "#fff").style("stroke-width", "2.5px")
+        .style("stroke", "#fff")
+        .style("stroke-width", "2.5px")
+        // ENHANCEMENT: Visualise Space Junk
+        .classed("node-abandoned", d => d.is_abandoned)
+        .classed("ghost-node", d => d.is_abandoned) 
         .style("filter", "drop-shadow(0 2px 8px rgba(0,0,0,0.15))");
 
     sim.nodes(nodes).on("tick", () => {
@@ -428,6 +497,17 @@ function renderTreeItem(item, container, isRoot = false) {
     label.textContent = item.label;
     label.style.flex = '1';
     nodeDiv.appendChild(label);
+    // NEW: Add a small portal icon if URL exists in the node data
+    const sourceNode = nodes.find(n => n.id === item.id);
+    if (sourceNode && sourceNode.url) {
+        const urlIcon = document.createElement('a');
+        urlIcon.innerHTML = ' 🔗';
+        urlIcon.href = sourceNode.url;
+        urlIcon.target = '_blank';
+        urlIcon.className = 'tree-link-icon';
+        urlIcon.onclick = (e) => e.stopPropagation(); // Don't trigger node focus
+        nodeDiv.appendChild(urlIcon);
+    }
     const count = document.createElement('span');
     count.className = 'node-count';
     count.textContent = item.count;
@@ -458,15 +538,40 @@ function renderTreeItem(item, container, isRoot = false) {
     container.appendChild(div);
 }
 
+function filterAbandoned() {
+    d3.selectAll(".node-group").transition().duration(400).attr("opacity", d => {
+        return d.is_abandoned ? 1 : 0.05;
+    });
+}
+
 function focusOn(d) {
     currentFocusId = d.id;
     isSpinning = false;
     const lineage = getLineage(d.id);
     const clusterColor = getColorValue(d.type);
+    
     document.getElementById('hud-sidebar').classList.add('open');
     document.getElementById('active-asset').innerText = d.label;
     document.getElementById('active-asset').style.color = clusterColor;
+
+    // UPDATE: View Counts and Connections
     document.getElementById('stat-connections').innerText = getLinkCount(d.id);
+    document.getElementById('stat-views').innerText = d.views ? d.views.toLocaleString() : "0";
+
+    // UPDATE: Show Abandoned Status in UI
+    const badge = document.getElementById('junk-tag'); // Add this ID to your HTML
+    if (d.is_abandoned) {
+        document.getElementById('active-asset').innerHTML += '<span class="abandoned-badge" style="display:inline">SPACE JUNK</span>';
+    }
+
+    // Portal Link
+    const linkBtn = document.getElementById('arcgis-link');
+    if (d.url) {
+        linkBtn.href = d.url;
+        linkBtn.style.display = 'block';
+    } else {
+        linkBtn.style.display = 'none';
+    }
     document.getElementById('stat-cluster-size').innerText = lineage.size;
     document.getElementById('match-list').style.display = 'none';
     d3.selectAll(".base-line")
