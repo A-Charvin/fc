@@ -215,11 +215,9 @@
         .node-group { cursor: pointer; pointer-events: all; transition: opacity 0.3s; }
         .node-circle { transition: r 0.3s, filter 0.3s; }
 
-        /* New Style for Abandoned Nodes */
-        /* Update the existing node-abandoned */
         .node-abandoned {
             stroke-dasharray: 5, 3;
-            stroke: #ef4444 !important; /* Sharp Red */
+            stroke: #ef4444 !important;
             stroke-width: 6px !important;
             filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.4));
             animation: ghost-float 3s ease-in-out infinite;
@@ -230,7 +228,6 @@
             50% { opacity: 0.4; transform: scale(0.95); }
         }
 
-        /* Add a tag for the Sidebar */
         .abandoned-badge {
             background: #ef4444;
             color: white;
@@ -239,10 +236,9 @@
             border-radius: 10px;
             font-weight: 900;
             margin-left: 10px;
-            display: none; /* Hidden by default */
+            display: none;
         }
 
-        /* Style for the new View Button */
         .view-arcgis-btn {
             display: block;
             width: 100%;
@@ -268,8 +264,7 @@
             text-decoration: none;
             opacity: 0.6;
         }
-    .tree-link-icon:hover { opacity: 1; }
-    
+        .tree-link-icon:hover { opacity: 1; }
     </style>
 </head>
 <body>
@@ -278,14 +273,11 @@
             <img src="https://www.frontenaccounty.ca/en/images/structure/logo.svg" 
                 alt="Frontenac County Logo" 
                 style="height: 38px; width: auto;">
-            
             <div style="display: flex; align-items: center; gap: 12px;">
                 <h1 style="font-size: 13px; letter-spacing: 2px; font-weight: 900; color: var(--header-text); margin: 0; white-space: nowrap;">
                     AGOL CLUSTER
                 </h1>
-
                 <span style="color: rgba(255,255,255,0.4); font-weight: 300; font-size: 18px;">|</span>
-
                 <span style="font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.9); letter-spacing: 0.5px; white-space: nowrap;">
                     Made with ❤️ in Frontenac
                 </span>
@@ -336,6 +328,16 @@
 
         <div class="cluster-stats">
             <div class="stat-box">
+                <div class="stat-label">Blast Radius</div>
+                <div class="stat-value" id="stat-blast">0</div>
+                <div class="stat-label" style="font-size:7px;">Items Affected</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Dependencies</div>
+                <div class="stat-value" id="stat-deps">0</div>
+                <div class="stat-label" style="font-size:7px;">Required to Run</div>
+            </div>
+            <div class="stat-box">
                 <div class="stat-label">Connections</div>
                 <div class="stat-value" id="stat-connections">0</div>
             </div>
@@ -357,7 +359,6 @@ let nodes = [], links = [], orbitAngle = 0, isSpinning = true;
 const width = window.innerWidth, height = window.innerHeight;
 let currentFocusId = null;
 
-// Handle dark mode state
 const isDarkModeStored = localStorage.getItem('darkMode') === 'true';
 if (isDarkModeStored) {
     document.body.classList.add('dark-mode');
@@ -384,25 +385,23 @@ const sim = d3.forceSimulation()
     .force("charge", d3.forceManyBody().strength(-2000))
     .force("center", d3.forceCenter(width / 2, height / 2));
 
-function getColor(type) {
-    if (!type) return "var(--f-gold)";
-    const t = type.toLowerCase();
-    if (t.includes("feature")) return "var(--f-green)";
-    if (t.includes("web map")) return "var(--f-blue)";
-    if (t.includes("application") || t.includes("dashboard")) return "var(--f-purple)";
-    return "var(--f-gold)"; 
-}
-
 function getColorValue(type) {
-    const colorVar = getColor(type);
-    if (colorVar.includes('green')) return '#10b981';
-    if (colorVar.includes('blue')) return '#3b82f6';
-    if (colorVar.includes('purple')) return '#8b5cf6';
+    if (!type) return "#f59e0b";
+    const t = type.toLowerCase();
+    if (t.includes("feature")) return '#10b981';
+    if (t.includes("web map")) return '#3b82f6';
+    if (t.includes("application") || t.includes("dashboard")) return '#8b5cf6';
     return '#f59e0b';
 }
 
-d3.json("content_graph.json").then(data => {
-    nodes = data.nodes; links = data.edges;
+d3.json("content_audit_graph.json").then(data => {
+    nodes = data.nodes; 
+    // Safety check for links to ensure nodes exist
+    links = data.edges.filter(l => 
+        nodes.find(n => n.id === (l.source.id || l.source)) && 
+        nodes.find(n => n.id === (l.target.id || l.target))
+    );
+
     const linkContainer = orbitG.append("g").selectAll(".link-group")
         .data(links).enter().append("g").attr("class", "link-group");
     linkContainer.append("line").attr("class", "line-hitbox");
@@ -432,9 +431,7 @@ d3.json("content_graph.json").then(data => {
         .attr("fill", d => getColorValue(d.type))
         .style("stroke", "#fff")
         .style("stroke-width", "2.5px")
-        // ENHANCEMENT: Visualise Space Junk
         .classed("node-abandoned", d => d.is_abandoned)
-        .classed("ghost-node", d => d.is_abandoned) 
         .style("filter", "drop-shadow(0 2px 8px rgba(0,0,0,0.15))");
 
     sim.nodes(nodes).on("tick", () => {
@@ -451,17 +448,6 @@ function getLinkCount(id) {
     return links.filter(l => (l.source.id||l.source) === id || (l.target.id||l.target) === id).length;
 }
 
-function getDirectConnections(id) {
-    return links
-        .filter(l => (l.source.id || l.source) === id || (l.target.id || l.target) === id)
-        .map(l => {
-            const sourceId = l.source.id || l.source;
-            const targetId = l.target.id || l.target;
-            return sourceId === id ? targetId : sourceId;
-        });
-}
-
-// This function now understands the "Source" and "Target" logic from your crawler
 function buildNestedTree(startId, depth = 0, visited = new Set()) {
     if (depth > 3 || visited.has(startId)) return null; 
     visited.add(startId);
@@ -469,120 +455,60 @@ function buildNestedTree(startId, depth = 0, visited = new Set()) {
     const node = nodes.find(n => n.id === startId);
     if (!node) return null;
 
-    // Find everything THIS item points to (Downstream)
-    const downstream = links
-        .filter(l => (l.source.id || l.source) === startId)
-        .map(l => ({
-            id: l.target.id || l.target,
-            relType: "Downstream" 
-        }));
-
-    // Find everything that points TO THIS item (Upstream)
-    const upstream = links
-        .filter(l => (l.target.id || l.target) === startId)
-        .map(l => ({
-            id: l.source.id || l.source,
-            relType: "Upstream"
-        }));
-
+    // Crawler Direction: Source (Consumer) -> Target (Provider)
+    const downstream = links.filter(l => (l.target.id || l.target) === startId).map(l => ({ id: l.source.id || l.source, relType: "Upstream (Provider)" }));
+    const upstream = links.filter(l => (l.source.id || l.source) === startId).map(l => ({ id: l.target.id || l.target, relType: "Downstream (Consumer)" }));
     const allConnections = [...downstream, ...upstream];
 
-    const children = allConnections
-        .map(conn => {
-            const childTree = buildNestedTree(conn.id, depth + 1, new Set(visited));
-            if (childTree) {
-                childTree.relDirection = conn.relType;
-                return childTree;
-            }
-            return null;
-        })
-        .filter(n => n !== null);
+    const children = allConnections.map(conn => {
+        const childTree = buildNestedTree(conn.id, depth + 1, new Set(visited));
+        if (childTree) { childTree.relDirection = conn.relType; return childTree; }
+        return null;
+    }).filter(n => n !== null);
 
-    return {
-        id: node.id,
-        label: node.label,
-        type: node.type,
-        count: allConnections.length,
-        children: children
-    };
+    return { id: node.id, label: node.label, type: node.type, count: allConnections.length, children: children };
 }
 
 function updateTreeDrilldown(activeNode) {
     const container = document.getElementById('tree-container');
-    container.innerHTML = '';
-    
-    // Header for the tree
-    const header = document.createElement('div');
-    header.className = 'sidebar-label';
-    header.style.marginBottom = '15px';
-    header.innerHTML = 'Relationship Hierarchy';
-    container.appendChild(header);
-
+    container.innerHTML = '<div class="sidebar-label" style="margin-bottom:15px;">Relationship Hierarchy</div>';
     const treeData = buildNestedTree(activeNode.id);
-    if (treeData) {
-        renderTreeItem(treeData, container, true);
-    } else {
-        container.innerHTML = '<div style="font-size:11px; opacity:0.6; padding:20px; text-align:center;">No relationships found for this asset.</div>';
-    }
+    if (treeData && treeData.children.length > 0) { renderTreeItem(treeData, container, true); } 
+    else { container.innerHTML += '<div style="font-size:11px; opacity:0.6; padding:20px; text-align:center;">No relationships detected.</div>'; }
 }
 
 function renderTreeItem(item, container, isRoot = false) {
     const div = document.createElement('div');
     div.className = 'tree-item';
-
     const nodeDiv = document.createElement('div');
     nodeDiv.className = isRoot ? 'tree-node active' : 'tree-node';
     nodeDiv.style.borderLeft = `4px solid ${getColorValue(item.type)}`;
     
-    // Direction Indicator (Upstream/Downstream)
     const dirIcon = document.createElement('span');
-    dirIcon.style.fontSize = '8px';
-    dirIcon.style.marginRight = '8px';
-    dirIcon.style.opacity = '0.5';
-    dirIcon.textContent = isRoot ? '⊙' : (item.relDirection === 'Upstream' ? '▲' : '▼');
+    dirIcon.style.fontSize = '8px'; dirIcon.style.marginRight = '8px'; dirIcon.style.opacity = '0.5';
+    dirIcon.textContent = isRoot ? '⊙' : (item.relDirection.includes('Upstream') ? '▲' : '▼');
     nodeDiv.appendChild(dirIcon);
 
     const label = document.createElement('span');
-    label.textContent = item.label;
-    label.style.flex = '1';
-    label.style.whiteSpace = 'nowrap';
-    label.style.overflow = 'hidden';
-    label.style.textOverflow = 'ellipsis';
+    label.textContent = item.label; label.style.flex = '1'; label.style.whiteSpace = 'nowrap'; label.style.overflow = 'hidden'; label.style.textOverflow = 'ellipsis';
     nodeDiv.appendChild(label);
 
-    // Add ArcGIS Link Icon
     const sourceNode = nodes.find(n => n.id === item.id);
     if (sourceNode && sourceNode.url) {
         const urlIcon = document.createElement('a');
-        urlIcon.innerHTML = ' ↗';
-        urlIcon.href = sourceNode.url;
-        urlIcon.target = '_blank';
-        urlIcon.className = 'tree-link-icon';
-        urlIcon.onclick = (e) => e.stopPropagation();
+        urlIcon.innerHTML = ' ↗'; urlIcon.href = sourceNode.url; urlIcon.target = '_blank';
+        urlIcon.className = 'tree-link-icon'; urlIcon.onclick = (e) => e.stopPropagation();
         nodeDiv.appendChild(urlIcon);
     }
-
-    nodeDiv.onclick = (e) => {
-        e.stopPropagation();
-        focusOn(nodes.find(n => n.id === item.id));
-    };
-
+    nodeDiv.onclick = (e) => { e.stopPropagation(); focusOn(nodes.find(n => n.id === item.id)); };
     div.appendChild(nodeDiv);
-
     if (item.children && item.children.length > 0) {
         const childrenDiv = document.createElement('div');
         childrenDiv.className = 'tree-children open';
         item.children.forEach(child => renderTreeItem(child, childrenDiv));
         div.appendChild(childrenDiv);
     }
-
     container.appendChild(div);
-}
-
-function filterAbandoned() {
-    d3.selectAll(".node-group").transition().duration(400).attr("opacity", d => {
-        return d.is_abandoned ? 1 : 0.05;
-    });
 }
 
 function focusOn(d) {
@@ -590,58 +516,39 @@ function focusOn(d) {
     isSpinning = false;
     const lineage = getLineage(d.id);
     const clusterColor = getColorValue(d.type);
-    
     document.getElementById('hud-sidebar').classList.add('open');
-    
-    // Handle the label and potential badge
     const assetTitle = document.getElementById('active-asset');
     assetTitle.innerText = d.label;
     assetTitle.style.color = clusterColor;
-    if (d.is_abandoned) {
-        assetTitle.innerHTML += '<span class="abandoned-badge" style="display:inline">SPACE JUNK</span>';
-    }
+    if (d.is_abandoned) { assetTitle.innerHTML += '<span class="abandoned-badge" style="display:inline">SPACE JUNK</span>'; }
 
-    // Update Stats
+    // Update New Stats from ItemGraph
+    document.getElementById('stat-blast').innerText = d.dependency_info ? d.dependency_info.total_recursive_dependents : "0";
+    document.getElementById('stat-deps').innerText = d.dependency_info ? d.dependency_info.total_recursive_dependencies : "0";
     document.getElementById('stat-connections').innerText = getLinkCount(d.id);
     document.getElementById('stat-views').innerText = d.views ? d.views.toLocaleString() : "0";
 
-    // Portal Link
     const linkBtn = document.getElementById('arcgis-link');
-    if (d.url) {
-        linkBtn.href = d.url;
-        linkBtn.style.display = 'block';
-    } else {
-        linkBtn.style.display = 'none';
-    }
-
+    if (d.url) { linkBtn.href = d.url; linkBtn.style.display = 'block'; } else { linkBtn.style.display = 'none'; }
     document.getElementById('match-list').style.display = 'none';
 
-    // Highlight relationships in the graph
     d3.selectAll(".base-line")
         .classed("active-trace", l => lineage.has(l.source.id || l.source) && lineage.has(l.target.id || l.target))
         .attr("stroke", l => {
-             const sId = l.source.id || l.source;
-             const tId = l.target.id || l.target;
+             const sId = l.source.id || l.source; const tId = l.target.id || l.target;
              return (lineage.has(sId) && lineage.has(tId)) ? clusterColor : "rgba(0,0,0,0.12)";
         })
         .attr("stroke-opacity", l => {
-             const sId = l.source.id || l.source;
-             const tId = l.target.id || l.target;
+             const sId = l.source.id || l.source; const tId = l.target.id || l.target;
              return (lineage.has(sId) && lineage.has(tId)) ? 0.9 : 0.25;
         });
 
     d3.selectAll(".node-group").attr("opacity", n => lineage.has(n.id) ? 1 : 0.12);
 
-    // Zoom Calculation
     const rad = (orbitAngle * Math.PI) / 180;
     const rx = (d.x - width/2) * Math.cos(rad) - (d.y - height/2) * Math.sin(rad) + width/2;
     const ry = (d.x - width/2) * Math.sin(rad) + (d.y - height/2) * Math.cos(rad) + height/2;
-    
-    svg.transition().duration(800).call(
-        zoom.transform, 
-        d3.zoomIdentity.translate(width/2 + 160, height/2).scale(0.8).translate(-rx, -ry)
-    );
-
+    svg.transition().duration(800).call(zoom.transform, d3.zoomIdentity.translate(width/2 + 160, height/2).scale(0.8).translate(-rx, -ry));
     updateTreeDrilldown(d);
 }
 
@@ -651,6 +558,10 @@ function filterByGroup(group) {
         const groupColor = group === 'FEATURES' ? '#10b981' : group === 'MAPS' ? '#3b82f6' : group === 'APPS' ? '#8b5cf6' : '#f59e0b';
         return color === groupColor ? 1 : 0.12;
     });
+}
+
+function filterAbandoned() {
+    d3.selectAll(".node-group").transition().duration(400).attr("opacity", d => d.is_abandoned ? 1 : 0.05);
 }
 
 function getLineage(id, set = new Set()) {
@@ -667,12 +578,10 @@ function resetToGalaxy() {
     currentFocusId = null;
     document.getElementById('hud-sidebar').classList.remove('open');
     document.getElementById('match-list').style.display = 'none';
-    d3.selectAll(".base-line").classed("active-trace", false)
-        .attr("stroke", d => {
+    d3.selectAll(".base-line").classed("active-trace", false).attr("stroke", d => {
             const targetNode = nodes.find(n => n.id === (d.target.id || d.target));
             return getColorValue(targetNode.type);
-        })
-        .attr("stroke-opacity", 0.5);
+        }).attr("stroke-opacity", 0.5);
     d3.selectAll(".node-group").attr("opacity", 1);
     svg.transition().duration(1200).call(zoom.transform, d3.zoomIdentity.translate(width/2, height/2).scale(0.045).translate(-width/2, -height/2));
 }
@@ -688,10 +597,7 @@ document.getElementById('search').addEventListener('input', function(e) {
     } else { list.style.display = 'none'; }
 });
 
-window.focusOnById = function(id) {
-    const node = nodes.find(n => n.id === id);
-    if (node) focusOn(node);
-};
+window.focusOnById = function(id) { const node = nodes.find(n => n.id === id); if (node) focusOn(node); };
 </script>
 </body>
 </html>
