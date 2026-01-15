@@ -2,7 +2,8 @@
 
 **Visualize and trace deep dependencies between ArcGIS Portal items, from Feature Layers to Apps.**
 
-AGOL Content Galaxy solves the "where is this used?" problem. By crawling your portal's internal JSON, it maps relationships that the standard ArcGIS interface often misses—such as layers tucked inside Web Maps, which are then embedded in Experience Builder apps.
+AGOL Content Galaxy solves the "where is this used?" problem. By crawling your portal's internal JSON and performing recursive dependency analysis,
+it maps relationships that the standard ArcGIS interface often misses—such as layers tucked inside Web Maps, which are then embedded in Experience Builder apps.
 
 ---
 
@@ -11,15 +12,17 @@ AGOL Content Galaxy solves the "where is this used?" problem. By crawling your p
 The project consists of two distinct components:
 
 1. **The Crawler (`crawler.py`):**
-   - Authenticates with your GIS (ArcGIS Online or Enterprise).
-   - Performs a recursive scan of all items.
-   - Parses item JSON to find "hidden" dependencies.
-   - Outputs `content_graph.json` in the project folder.
+* Authenticates with your GIS (ArcGIS Online or Enterprise).
+* Performs a recursive scan of all items using the `ItemGraph` engine.
+* Calculates **Blast Radius** (how many items break if this is deleted) and **Dependencies** (how many items this relies on).
+* Outputs `content_audit_graph.json` in the project folder.
+
 
 2. **The Galaxy (`index.html`):**
-   - Loads `content_graph.json`.
-   - Renders an interactive force-directed "Galaxy" of your portal assets.
-   - Provides "Kinetic Lineage" to trace upstream and downstream dependencies.
+* Renders an interactive force-directed "Galaxy" using D3.js.
+* Provides **Kinetic Lineage** to trace upstream and downstream paths.
+* Features a **HUD Sidebar** with deep-drilldown relationship trees.
+
 
 ---
 
@@ -53,7 +56,9 @@ python crawler.py
 
 ```
 
-*This will generate `content_graph.json` in your local folder.*
+*This will now generate both `content_audit_graph.json` (for the Galaxy) and `dependency_network.gml` (for external analysis).*
+
+---
 
 ### 2. Launch the Visualization
 
@@ -74,30 +79,52 @@ Upload `index.html` and `content_graph.json` to any web server (IIS, GitHub Page
 
 ---
 
-## 🎨 Visual Guide
+## 🎨 Visual Guide & Metrics
 
-| Asset Type   | Color     | Type Examples                        |
-| ------------ | --------- | ------------------------------------ |
-| **Features** | 🟢 Green  | Feature Layers / Services            |
-| **Web Maps** | 🔵 Blue   | Maps organizing feature data         |
-| **Apps**     | 🟣 Purple | Dashboards, Experience Builder       |
-| **Other**    | 🟡 Gold   | Utilities, Notebooks, orphaned files |
+| Asset Type | Color | Description |
+| --- | --- | --- |
+| **Features** | 🟢 Green | Feature Layers / Services |
+| **Web Maps** | 🔵 Blue | Maps organizing feature data |
+| **Apps** | 🟣 Purple | Dashboards, Experience Builder, Web AppBuilder |
+| **Space Junk** | 🔴 Red (Glow) | **Abandoned Nodes:** Items with 0 connections floating in the void. |
+
+---
+### 📊 Advanced Metrics in Sidebar
+
+* **Blast Radius:** The total count of recursive dependents. A high number means many apps/maps will break if this item is modified.
+* **Dependencies:** The total count of items this asset requires to function properly.
+* **View Count:** Real-time popularity data pulled from AGOL.
 
 ---
 
 ## ⌨️ Interface Controls
 
-* **Scroll/Pinch:** Zoom in to see individual assets or out for the "Galaxy" view.
-* **Drag:** Move the entire galaxy or individual nodes.
-* **Search:** Use the top-right search bar to find an asset by name.
-* **Click Node:** Enters **Focus Mode**. It isolates the "Kinetic Lineage" of that asset, showing exactly what feeds into it (Upstream) and what it powers (Downstream).
-* **Reset:** Returns the galaxy to its default orbital rotation.
+* **Scroll/Pinch:** Zoom from the "Galaxy" view (0.045x) down to individual asset labels.
+* **Click Node:** Enters **Focus Mode**. Isolates the lineage and opens the **Relationship Hierarchy** tree.
+* **Relationship Tree:** * `▲` **Provider:** An item this asset relies on (Upstream).
+* `▼` **Consumer:** An item that consumes this asset (Downstream).
+* **Filter by Type:** Click the legend items to dim everything except the selected category.
+* **Search:** Find any asset by name to jump directly to its location in the galaxy.
+
+---
+
+## 🛰️ Data Exports
+
+The crawler now generates two distinct output files to support different workflows:
+
+1. **`content_audit_graph.json`**: Optimized for the Web Galaxy frontend. Includes UI-specific metadata like node colors, blast radius metrics, and orbital positions.
+2. **`dependency_network.gml`**: A standardized XML-based geography file. This allows you to import the portal's dependency "geography" into:
+* **Gephi**: For advanced network topology analysis.
+* **ArcGIS Pro / QGIS**: To treat the dependency graph as a formal spatial layer.
+* **NetworkX**: For programmatic graph theory calculations in Python.
 
 ---
 
 ## 📝 Technical Notes
 
-* **Recursive Parsing:** The crawler uses a recursive `extract_ids_from_dict` function to find 32-character ArcGIS IDs nested at any depth within item JSON.
-* **Orphan Filtering:** The script automatically excludes items with zero connections to keep the visualization clean and meaningful.
-* **Performance:** The D3 engine is optimized for up to ~5,000 nodes. For larger portals, consider using the `max_items` filter in the Python script.
+* **Recursive Analysis:** Unlike standard crawlers, this project calculates "recursive blast radius," meaning it knows if a Feature Layer is used in a Map that is used in a Dashboard that is embedded in a Hub Site.
+* **GML Schema:** The GML output follows the standard `node` and `edge` schema, preserving all AGOL metadata (Item ID, Type, Owner) as attributes within the XML structure.
+* **D3 Engine:** Uses a high-performance force simulation with custom collision detection to prevent node overlapping.
+* **Authentication:** Uses `GIS("home")` by default to leverage your existing ArcGIS Pro credentials.
 
+---
