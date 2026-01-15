@@ -3,7 +3,7 @@
 **Visualize and trace deep dependencies between ArcGIS Portal items, from Feature Layers to Apps.**
 
 AGOL Content Galaxy solves the "where is this used?" problem. By crawling your portal's internal JSON and performing recursive dependency analysis,
-it maps relationships that the standard ArcGIS interface often misses—such as layers tucked inside Web Maps, which are then embedded in Experience Builder apps.
+it maps relationships that the standard ArcGIS interface often misses - such as layers tucked inside Web Maps, which are then embedded in Experience Builder apps.
 
 ---
 
@@ -128,3 +128,19 @@ The crawler now generates two distinct output files to support different workflo
 * **Authentication:** Uses `GIS("home")` by default to leverage your existing ArcGIS Pro credentials.
 
 ---
+
+## 📚 Documentations & References
+
+The core of this project is built upon the official ArcGIS API for Python and D3.js. Below are the primary resources used for the dependency logic and visualization engine:
+
+### ArcGIS API for Python
+
+* **[Org-wide Dependency Graph](https://developers.arcgis.com/python/latest/samples/org-wide-dependency-graph/)** – The foundation for mapping relationships across an entire ArcGIS organization.
+* **[ArcGIS Apps: ItemGraph](https://developers.arcgis.com/python/latest/api-reference/arcgis.apps.itemgraph.html)** – Detailed API reference for the `ItemGraph` class used to calculate recursive lineage.
+* **[Cloning ArcGIS Pro Environments](https://pro.arcgis.com/en/pro-app/latest/arcpy/get-started/clone-an-environment.htm)** – Guide on setting up the Python environment required to run the crawler.
+
+### Graph Theory & Visualization
+
+* **[D3.js Force-Directed Graphs](https://d3js.org/d3-force)** – Documentation for the physics engine powering the "Galaxy" movement and node collisions.
+* **[GML Format Specification](https://www.ogc.org/standards/gml/)** – Technical background on the Graph Modelling Language used for the `.gml` export.
+* **[ArcGIS Portal API: Item Data](https://developers.arcgis.com/rest/users-groups-and-items/item-data.htm)** – Reference for the internal JSON structures we parse to find "hidden" dependencies like layer IDs inside Web Map specs.
