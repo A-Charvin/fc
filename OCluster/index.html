@@ -394,7 +394,7 @@ function getColorValue(type) {
     return '#f59e0b';
 }
 
-d3.json("content_audit_graph.json").then(data => {
+d3.json("content_graph.json").then(data => {
     nodes = data.nodes; 
     // Safety check for links to ensure nodes exist
     links = data.edges.filter(l => 
