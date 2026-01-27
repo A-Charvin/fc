@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Frontenac GIS | Asset Registry</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --space-bg: #f5f6f8;
+            --header-bg: linear-gradient(135deg, #088337 0%, #086e3b 100%);
+            --f-neon: #0066cc;
+            --f-green: #10b981;
+            --f-blue: #3b82f6;
+            --f-purple: #8b5cf6;
+            --f-gold: #f59e0b;
+            --f-red: #ef4444;
+            --glass: rgba(255, 255, 255, 0.95);
+            --border: rgba(0, 0, 0, 0.12);
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --text-lighter: #9ca3af;
+            --header-text: white;
+            --header-shadow: rgba(0, 102, 204, 0.15);
+            --card-bg: #ffffff;
+        }
+        body.dark-mode {
+            --space-bg: #0a0f19;
+            --header-bg: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            --f-neon: #00f2ff;
+            --glass: rgba(10, 15, 25, 0.98);
+            --border: rgba(255, 255, 255, 0.15);
+            --text-dark: #e5e7eb;
+            --text-light: #9ca3af;
+            --text-lighter: #6b7280;
+            --header-text: white;
+            --header-shadow: rgba(0, 242, 255, 0.1);
+            --card-bg: #1a1f35;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            background: var(--space-bg); 
+            color: var(--text-dark); 
+            font-family: 'Inter', sans-serif; 
+            transition: background 0.3s, color 0.3s;
+            min-height: 100vh;
+        }
+        header {
+            position: fixed; top: 0; left: 0; right: 0; height: 70px;
+            background: var(--header-bg);
+            backdrop-filter: blur(20px);
+            border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 30px; z-index: 2000; box-shadow: 0 4px 16px var(--header-shadow);
+        }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .header-left img { height: 28px; }
+        .header-left h1 { font-size: 13px; letter-spacing: 2.5px; font-weight: 900; color: var(--header-text); }
+        .header-controls { display: flex; gap: 12px; align-items: center; }
+        button {
+            background: white; border: none; color: var(--f-neon);
+            padding: 10px 18px; border-radius: 6px; cursor: pointer;
+            font-size: 11px; font-weight: 700; text-transform: uppercase;
+            transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        body.dark-mode button {
+            background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.2); color: var(--f-neon);
+        }
+        button:hover { background: rgba(255,255,255,0.9); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        
+        .theme-toggle {
+            background: rgba(255,255,255,0.15) !important; border: 1.5px solid rgba(255,255,255,0.3) !important;
+            color: var(--header-text); padding: 8px 12px; border-radius: 6px; cursor: pointer;
+            font-size: 14px; outline: none; transition: all 0.2s; backdrop-filter: blur(10px);
+        }
+        .theme-toggle:hover { background: rgba(255,255,255,0.25) !important; border-color: rgba(255,255,255,0.5) !important; }
+        
+        #jsonFileInput { display: none; }
+        
+        #loadingOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+            z-index: 5000; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        #loadingOverlay.show { opacity: 1; pointer-events: all; }
+        .loading-box {
+            background: var(--glass); padding: 40px; border-radius: 12px;
+            border: 1.5px solid var(--border); text-align: center;
+            backdrop-filter: blur(10px); box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .loading-spinner {
+            width: 40px; height: 40px; border: 3px solid var(--border);
+            border-top-color: var(--f-neon); border-radius: 50%;
+            animation: spin 1s linear infinite; margin: 0 auto 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+        
+        main {
+            margin-top: 70px;
+            padding: 30px;
+            max-width: 1600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .filters-section {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            background: var(--glass);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1.5px solid var(--border);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-light);
+            letter-spacing: 0.5px;
+        }
+        
+        select, input {
+            background: white;
+            border: 1.5px solid var(--border);
+            color: #1f2937;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body.dark-mode select,
+        body.dark-mode input {
+            background: #1f2937;
+            border-color: rgba(255,255,255,0.2);
+            color: white;
+        }
+        
+        select option {
+            background: white;
+            color: #1f2937;
+        }
+        
+        body.dark-mode select option {
+            background: #1f2937;
+            color: white;
+        }
+        
+        select:hover, input:hover {
+            border-color: var(--f-neon);
+            background: rgba(0,102,204,0.08);
+        }
+        
+        body.dark-mode select:hover, body.dark-mode input:hover {
+            background: #2d3748;
+        }
+        
+        select:focus, input:focus {
+            border-color: var(--f-neon);
+            box-shadow: 0 0 8px rgba(0,102,204,0.2);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: var(--glass);
+            border: 1.5px solid var(--border);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--f-neon);
+            margin: 8px 0;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-light);
+            letter-spacing: 0.5px;
+        }
+        
+        .table-container {
+            background: var(--glass);
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        
+        thead {
+            background: linear-gradient(135deg, rgba(0,102,204,0.08) 0%, transparent 100%);
+            border-bottom: 2px solid var(--border);
+        }
+        
+        body.dark-mode thead {
+            background: linear-gradient(135deg, rgba(0,242,255,0.08) 0%, transparent 100%);
+        }
+        
+        th {
+            padding: 16px;
+            text-align: left;
+            font-weight: 700;
+            color: var(--text-dark);
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+        }
+        
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        tbody tr {
+            transition: all 0.2s;
+        }
+        
+        tbody tr:hover {
+            background: rgba(0,102,204,0.06);
+        }
+        
+        body.dark-mode tbody tr:hover {
+            background: rgba(0,242,255,0.06);
+        }
+        
+        .type-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .type-feature { background: rgba(16, 185, 129, 0.2); color: var(--f-green); }
+        .type-map { background: rgba(59, 130, 246, 0.2); color: var(--f-blue); }
+        .type-app { background: rgba(139, 92, 246, 0.2); color: var(--f-purple); }
+        .type-other { background: rgba(245, 158, 11, 0.2); color: var(--f-gold); }
+        
+        .abandoned-badge {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--f-red);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        
+        .risk-high { background: rgba(239, 68, 68, 0.2); color: var(--f-red); padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        .risk-medium { background: rgba(245, 158, 11, 0.2); color: var(--f-gold); padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        .risk-low { background: rgba(16, 185, 129, 0.2); color: var(--f-green); padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        
+        .cell-title {
+            font-weight: 700;
+            color: var(--f-neon);
+            cursor: pointer;
+        }
+        
+        .cell-title:hover {
+            text-decoration: underline;
+            opacity: 0.8;
+        }
+        
+        .expand-btn {
+            background: none;
+            border: none;
+            color: var(--f-neon);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px 8px;
+            font-weight: 700;
+            transition: transform 0.2s;
+            width: 30px;
+            text-align: center;
+        }
+        
+        .expand-btn.open {
+            transform: rotate(90deg);
+        }
+        
+        .details-row {
+            display: none;
+        }
+        
+        .details-row.open {
+            display: table-row;
+        }
+        
+        .details-cell {
+            padding: 0 !important;
+            background: rgba(0, 102, 204, 0.03);
+            border: none !important;
+        }
+        
+        body.dark-mode .details-cell {
+            background: rgba(0, 242, 255, 0.03);
+        }
+        
+        .details-content {
+            padding: 20px;
+            color: var(--text-dark);
+        }
+        
+        .connection-section {
+            margin-bottom: 20px;
+        }
+        
+        .connection-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .connection-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-light);
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .connection-count {
+            background: var(--f-neon);
+            color: white;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 800;
+        }
+        
+        .connection-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 8px;
+        }
+        
+        .connection-item {
+            background: rgba(0, 102, 204, 0.1);
+            border: 1px solid rgba(0, 102, 204, 0.3);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            color: var(--f-neon);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .connection-item-type {
+            font-size: 9px;
+            opacity: 0.7;
+            text-transform: uppercase;
+        }
+        
+        body.dark-mode .connection-item {
+            background: rgba(0, 242, 255, 0.1);
+            border-color: rgba(0, 242, 255, 0.3);
+            color: #00f2ff;
+        }
+        
+        .connection-item:hover {
+            background: rgba(0, 102, 204, 0.2);
+            border-color: var(--f-neon);
+        }
+        
+        .no-connections {
+            color: var(--text-light);
+            font-size: 11px;
+            font-style: italic;
+        }
+        
+        .indirect-section {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .indirect-toggle-btn {
+            background: none;
+            border: none;
+            color: var(--f-neon);
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        
+        .indirect-toggle-btn:hover {
+            opacity: 0.8;
+        }
+        
+        .indirect-list {
+            display: none;
+            margin-top: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .indirect-list.open {
+            display: block;
+        }
+        
+        .indirect-item {
+            padding: 6px 0;
+            font-size: 11px;
+            border-bottom: 1px solid rgba(0, 102, 204, 0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .indirect-item:hover {
+            color: var(--f-neon);
+            padding-left: 6px;
+        }
+        
+        .indirect-item-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .indirect-item-type {
+            font-size: 9px;
+            color: var(--text-light);
+            margin-left: 8px;
+            text-transform: uppercase;
+        }
+        
+        .goto-link {
+            color: var(--f-neon);
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 700;
+            margin-right: 6px;
+        }
+        
+        .goto-link:hover {
+            text-decoration: underline;
+        }
+        
+        .portal-link {
+            color: var(--f-gold);
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 700;
+            margin-left: 4px;
+        }
+        
+        .portal-link:hover {
+            text-decoration: underline;
+            opacity: 0.8;
+        }
+        
+        .connection-actions {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            margin-left: auto;
+        }
+        
+        .action-btn {
+            background: none;
+            border: none;
+            color: var(--f-neon);
+            cursor: pointer;
+            padding: 2px 6px;
+            font-size: 12px;
+            font-weight: 700;
+            transition: all 0.2s;
+            border-radius: 3px;
+        }
+        
+        .action-btn:hover {
+            background: rgba(0, 102, 204, 0.15);
+        }
+        
+        .copy-badge {
+            display: inline-block;
+            position: fixed;
+            top: 100px;
+            right: 30px;
+            background: var(--f-green);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            animation: slideIn 0.3s ease-out, slideOut 0.3s ease-out 2.7s;
+            z-index: 1000;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(400px); opacity: 0; }
+        }
+        
+        .sort-control {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .sort-btn {
+            background: rgba(0, 102, 204, 0.1);
+            border: 1px solid rgba(0, 102, 204, 0.3);
+            color: var(--f-neon);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+        
+        body.dark-mode .sort-btn {
+            background: rgba(0, 242, 255, 0.1);
+            border-color: rgba(0, 242, 255, 0.3);
+        }
+        
+        .sort-btn:hover, .sort-btn.active {
+            background: rgba(0, 102, 204, 0.2);
+            border-color: var(--f-neon);
+        }
+        
+        body.dark-mode .sort-btn:hover, body.dark-mode .sort-btn.active {
+            background: rgba(0, 242, 255, 0.2);
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div class="header-left" style="display: flex; align-items: center; gap: 14px;">
+        <img src="https://www.frontenaccounty.ca/en/images/structure/logo.svg" 
+            alt="Frontenac County Logo" 
+            style="height: 38px; width: auto;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <h1 style="font-size: 13px; letter-spacing: 2px; font-weight: 900; color: var(--header-text); margin: 0; white-space: nowrap;">
+                ASSET REGISTRY
+            </h1>
+            <span style="color: rgba(255,255,255,0.4); font-weight: 300; font-size: 18px;">|</span>
+            <span style="font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.9); letter-spacing: 0.5px; white-space: nowrap;">
+                Dependency Explorer
+            </span>
+        </div>
+    </div>
+    <div class="header-controls">
+        <button onclick="document.getElementById('jsonFileInput').click()">📂 Load Data</button>
+        <button class="theme-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+            <span id="theme-icon">🌙</span>
+        </button>
+    </div>
+</header>
+
+<input type="file" id="jsonFileInput" accept=".json">
+
+<div id="loadingOverlay">
+    <div class="loading-box">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading data...</div>
+    </div>
+</div>
+
+<main>
+    <div class="filters-section">
+        <div class="filter-group">
+            <label class="filter-label">Type:</label>
+            <select id="type-filter">
+                <option value="">All Types</option>
+                <option value="feature">Features</option>
+                <option value="map">Maps</option>
+                <option value="app">Apps</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label class="filter-label">Owner:</label>
+            <select id="owner-filter">
+                <option value="">All Owners</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label class="filter-label">Status:</label>
+            <select id="status-filter">
+                <option value="">All Items</option>
+                <option value="active">Active Only</option>
+                <option value="abandoned">Space Junk</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label class="filter-label">Search:</label>
+            <input type="text" id="search-filter" placeholder="Search by name...">
+        </div>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Total Assets</div>
+            <div class="stat-value" id="stat-total">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Active Items</div>
+            <div class="stat-value" id="stat-active">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Space Junk</div>
+            <div class="stat-value" id="stat-abandoned">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Displayed</div>
+            <div class="stat-value" id="stat-displayed">0</div>
+        </div>
+    </div>
+    
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Owner</th>
+                    <th>Views</th>
+                    <th>Risk Level</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+            </tbody>
+        </table>
+        <div id="no-data" class="no-data" style="display: none;">No items match your filters</div>
+    </div>
+</main>
+
+<script>
+let allNodes = [];
+let allLinks = [];
+let filteredNodes = [];
+
+const isDarkModeStored = localStorage.getItem('darkMode') === 'true';
+if (isDarkModeStored) {
+    document.body.classList.add('dark-mode');
+    document.getElementById('theme-icon').textContent = '☀️';
+}
+
+function toggleDarkMode() {
+    const isDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', isDark);
+    document.getElementById('theme-icon').textContent = isDark ? '☀️' : '🌙';
+}
+
+function showLoadingOverlay(show = true) {
+    const overlay = document.getElementById('loadingOverlay');
+    if (show) {
+        overlay.classList.add('show');
+    } else {
+        overlay.classList.remove('show');
+    }
+}
+
+function getTypeClass(type) {
+    if (!type) return 'type-other';
+    const t = type.toLowerCase();
+    if (t.includes("feature")) return 'type-feature';
+    if (t.includes("web map")) return 'type-map';
+    if (t.includes("application") || t.includes("dashboard")) return 'type-app';
+    return 'type-other';
+}
+
+function getTypeLabel(type) {
+    if (!type) return 'Other';
+    const t = type.toLowerCase();
+    if (t.includes("feature")) return 'Feature';
+    if (t.includes("web map")) return 'Map';
+    if (t.includes("application") || t.includes("dashboard")) return 'App';
+    return 'Other';
+}
+
+function getRiskLevel(node) {
+    const dependents = node.dependency_info?.total_recursive_dependents || 0;
+    const dependencies = node.dependency_info?.total_recursive_dependencies || 0;
+    const score = dependents + dependencies;
+    
+    if (score > 20) return { level: 'HIGH', class: 'risk-high' };
+    if (score > 5) return { level: 'MEDIUM', class: 'risk-medium' };
+    return { level: 'LOW', class: 'risk-low' };
+}
+
+function getDirectDependencies(nodeId) {
+    // Find all items that this node's SOURCE points to (what it depends on)
+    return allLinks
+        .filter(link => {
+            const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+            return sourceId === nodeId;
+        })
+        .map(link => {
+            const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+            return allNodes.find(n => n.id === targetId);
+        })
+        .filter(n => n);
+}
+
+function getDirectDependents(nodeId) {
+    // Find all items that have this node as their TARGET (what depends on this)
+    return allLinks
+        .filter(link => {
+            const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+            return targetId === nodeId;
+        })
+        .map(link => {
+            const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+            return allNodes.find(n => n.id === sourceId);
+        })
+        .filter(n => n);
+}
+
+function getAllIndirectDependencies(nodeId, visited = new Set()) {
+    // Recursively get all items this depends on
+    if (visited.has(nodeId)) return [];
+    visited.add(nodeId);
+    
+    const directDeps = getDirectDependencies(nodeId);
+    const allIndirect = [...directDeps];
+    
+    directDeps.forEach(dep => {
+        const indirectDeps = getAllIndirectDependencies(dep.id, new Set(visited));
+        indirectDeps.forEach(ind => {
+            if (!allIndirect.find(n => n.id === ind.id)) {
+                allIndirect.push(ind);
+            }
+        });
+    });
+    
+    return allIndirect;
+}
+
+function getAllIndirectDependents(nodeId, visited = new Set()) {
+    // Recursively get all items that depend on this
+    if (visited.has(nodeId)) return [];
+    visited.add(nodeId);
+    
+    const directDeps = getDirectDependents(nodeId);
+    const allIndirect = [...directDeps];
+    
+    directDeps.forEach(dep => {
+        const indirectDeps = getAllIndirectDependents(dep.id, new Set(visited));
+        indirectDeps.forEach(ind => {
+            if (!allIndirect.find(n => n.id === ind.id)) {
+                allIndirect.push(ind);
+            }
+        });
+    });
+    
+    return allIndirect;
+}
+
+function goToItem(nodeId) {
+    // Find the item in filtered nodes and scroll to it
+    const node = allNodes.find(n => n.id === nodeId);
+    if (!node) return;
+    
+    // Reset filters to show all
+    document.getElementById('type-filter').value = '';
+    document.getElementById('owner-filter').value = '';
+    document.getElementById('status-filter').value = '';
+    document.getElementById('search-filter').value = '';
+    
+    applyFilters();
+    
+    // Small delay to let rendering finish
+    setTimeout(() => {
+        const rowElement = document.getElementById(`row-${nodeId}`);
+        if (rowElement) {
+            rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            rowElement.style.backgroundColor = 'rgba(0, 102, 204, 0.2)';
+            setTimeout(() => {
+                rowElement.style.backgroundColor = '';
+            }, 2000);
+        }
+    }, 100);
+}
+
+function toggleIndirectList(nodeId, type) {
+    const listId = `indirect-${type}-${nodeId}`;
+    const btnId = `indirect-btn-${type}-${nodeId}`;
+    const list = document.getElementById(listId);
+    const btn = document.getElementById(btnId);
+    
+    if (list) {
+        list.style.display = list.style.display === 'none' ? 'block' : 'none';
+        btn.textContent = list.style.display === 'none' ? '▶ Show' : '▼ Hide';
+    }
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        // Show toast notification
+        const toast = document.createElement('div');
+        toast.className = 'copy-badge';
+        toast.textContent = '✓ Copied to clipboard';
+        document.body.appendChild(toast);
+        
+        setTimeout(() => toast.remove(), 3000);
+    });
+}
+
+function openPortal(url, e) {
+    if (e) e.stopPropagation();
+    if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }
+}
+
+function copyItemId(itemId, e) {
+    if (e) e.stopPropagation();
+    copyToClipboard(itemId);
+}
+
+function applyFilters() {
+    const typeFilter = document.getElementById('type-filter').value;
+    const ownerFilter = document.getElementById('owner-filter').value;
+    const statusFilter = document.getElementById('status-filter').value;
+    const searchFilter = document.getElementById('search-filter').value.toLowerCase();
+    
+    filteredNodes = allNodes.filter(node => {
+        if (typeFilter) {
+            const type = getTypeLabel(node.type).toLowerCase();
+            if (!type.includes(typeFilter)) return false;
+        }
+        
+        if (ownerFilter && node.owner !== ownerFilter) return false;
+        
+        if (statusFilter === 'active' && node.is_abandoned) return false;
+        if (statusFilter === 'abandoned' && !node.is_abandoned) return false;
+        
+        if (searchFilter && !node.label.toLowerCase().includes(searchFilter)) return false;
+        
+        return true;
+    });
+    
+    updateStats();
+    renderTable();
+}
+
+function updateStats() {
+    const abandoned = allNodes.filter(n => n.is_abandoned).length;
+    document.getElementById('stat-total').textContent = allNodes.length;
+    document.getElementById('stat-active').textContent = allNodes.length - abandoned;
+    document.getElementById('stat-abandoned').textContent = abandoned;
+    document.getElementById('stat-displayed').textContent = filteredNodes.length;
+}
+
+function toggleDetails(nodeId) {
+    const detailsRow = document.getElementById(`details-${nodeId}`);
+    const btn = document.getElementById(`btn-${nodeId}`);
+    
+    detailsRow.classList.toggle('open');
+    btn.classList.toggle('open');
+}
+
+function renderTable() {
+    const tbody = document.getElementById('table-body');
+    const noData = document.getElementById('no-data');
+    
+    if (filteredNodes.length === 0) {
+        tbody.innerHTML = '';
+        noData.style.display = 'block';
+        return;
+    }
+    
+    noData.style.display = 'none';
+    
+    let html = '';
+    
+    filteredNodes.forEach(node => {
+        const risk = getRiskLevel(node);
+        const deps = node.dependency_info?.total_recursive_dependencies || 0;
+        const dependents = node.dependency_info?.total_recursive_dependents || 0;
+        
+        // Get actual connected items
+        const directDeps = getDirectDependencies(node.id);
+        const directDependents = getDirectDependents(node.id);
+        const allIndirectDeps = getAllIndirectDependencies(node.id);
+        const allIndirectDependents = getAllIndirectDependents(node.id);
+        
+        // Filter to only show indirect (not direct)
+        const indirectDepsOnly = allIndirectDeps.filter(n => !directDeps.find(d => d.id === n.id));
+        const indirectDependentsOnly = allIndirectDependents.filter(n => !directDependents.find(d => d.id === n.id));
+        
+        const titleContent = node.url 
+            ? `<a href="${node.url}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; color: inherit;">${node.label} <span style="opacity: 0.6; font-size: 10px;">↗</span></a>`
+            : node.label;
+        
+        html += `
+        <tr id="row-${node.id}">
+            <td><button class="expand-btn" id="btn-${node.id}" onclick="toggleDetails('${node.id}')">▶</button></td>
+            <td><div class="cell-title">${titleContent}</div></td>
+            <td><span class="type-badge ${getTypeClass(node.type)}">${getTypeLabel(node.type)}</span></td>
+            <td>${node.owner || 'N/A'}</td>
+            <td><strong>${(node.views || 0).toLocaleString()}</strong></td>
+            <td><span class="${risk.class}">${risk.level}</span></td>
+            <td>${node.is_abandoned ? '<span class="abandoned-badge">Space Junk</span>' : '<span style="color: var(--f-green); font-weight: 700;">Active</span>'}</td>
+        </tr>
+        <tr class="details-row" id="details-${node.id}">
+            <td colspan="7">
+                <div class="details-cell">
+                    <div class="details-content">
+                        <div class="connection-section">
+                            <div class="connection-title">
+                                📥 Directly Depends On
+                                <span class="connection-count">${directDeps.length}</span>
+                            </div>
+                            ${directDeps.length > 0 ? `
+                                <div class="connection-list">
+                                    ${directDeps.map(n => `
+                                        <div class="connection-item">
+                                            <span class="goto-link" onclick="goToItem('${n.id}'); event.stopPropagation();" title="Jump to this item">→</span>
+                                            <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${n.label}">${n.label}</span>
+                                            <span class="connection-item-type">${getTypeLabel(n.type)}</span>
+                                            <div class="connection-actions">
+                                                ${n.url ? `<button class="action-btn" onclick="openPortal('${n.url}', event);" title="Open in ArcGIS Portal">🌐</button>` : ''}
+                                                <button class="action-btn" onclick="copyItemId('${n.id}', event);" title="Copy ID">📋</button>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : '<div class="no-connections">No direct dependencies</div>'}
+                            
+                            ${indirectDepsOnly.length > 0 ? `
+                                <div class="indirect-section">
+                                    <button class="indirect-toggle-btn" id="indirect-btn-deps-${node.id}" onclick="toggleIndirectList('${node.id}', 'deps'); event.stopPropagation();">
+                                        ▶ Show ${indirectDepsOnly.length} indirect dependencies
+                                    </button>
+                                    <div class="indirect-list" id="indirect-deps-${node.id}">
+                                        ${indirectDepsOnly.map(n => `
+                                            <div class="indirect-item" onclick="goToItem('${n.id}'); event.stopPropagation();">
+                                                <span class="indirect-item-name" title="${n.label}">${n.label}</span>
+                                                <div class="connection-actions">
+                                                    ${n.url ? `<button class="action-btn" onclick="openPortal('${n.url}', event);" title="Open in ArcGIS Portal">🌐</button>` : ''}
+                                                    <button class="action-btn" onclick="copyItemId('${n.id}', event);" title="Copy ID">📋</button>
+                                                </div>
+                                                <span class="indirect-item-type">${getTypeLabel(n.type)}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="connection-section">
+                            <div class="connection-title">
+                                📤 Directly Used By
+                                <span class="connection-count">${directDependents.length}</span>
+                            </div>
+                            ${directDependents.length > 0 ? `
+                                <div class="connection-list">
+                                    ${directDependents.map(n => `
+                                        <div class="connection-item">
+                                            <span class="goto-link" onclick="goToItem('${n.id}'); event.stopPropagation();" title="Jump to this item">→</span>
+                                            <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${n.label}">${n.label}</span>
+                                            <span class="connection-item-type">${getTypeLabel(n.type)}</span>
+                                            <div class="connection-actions">
+                                                ${n.url ? `<button class="action-btn" onclick="openPortal('${n.url}', event);" title="Open in ArcGIS Portal">🌐</button>` : ''}
+                                                <button class="action-btn" onclick="copyItemId('${n.id}', event);" title="Copy ID">📋</button>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : '<div class="no-connections">No direct dependents</div>'}
+                            
+                            ${indirectDependentsOnly.length > 0 ? `
+                                <div class="indirect-section">
+                                    <button class="indirect-toggle-btn" id="indirect-btn-dependents-${node.id}" onclick="toggleIndirectList('${node.id}', 'dependents'); event.stopPropagation();">
+                                        ▶ Show ${indirectDependentsOnly.length} indirect dependents
+                                    </button>
+                                    <div class="indirect-list" id="indirect-dependents-${node.id}">
+                                        ${indirectDependentsOnly.map(n => `
+                                            <div class="indirect-item" onclick="goToItem('${n.id}'); event.stopPropagation();">
+                                                <span class="indirect-item-name" title="${n.label}">${n.label}</span>
+                                                <div class="connection-actions">
+                                                    ${n.url ? `<button class="action-btn" onclick="openPortal('${n.url}', event);" title="Open in ArcGIS Portal">🌐</button>` : ''}
+                                                    <button class="action-btn" onclick="copyItemId('${n.id}', event);" title="Copy ID">📋</button>
+                                                </div>
+                                                <span class="indirect-item-type">${getTypeLabel(n.type)}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+function populateOwnerFilter() {
+    const owners = [...new Set(allNodes.map(n => n.owner).filter(o => o))].sort();
+    const select = document.getElementById('owner-filter');
+    
+    while (select.options.length > 1) {
+        select.remove(1);
+    }
+    
+    owners.forEach(owner => {
+        const option = document.createElement('option');
+        option.value = owner;
+        option.textContent = owner;
+        select.appendChild(option);
+    });
+}
+
+function initializeData(data) {
+    showLoadingOverlay(true);
+    
+    try {
+        allNodes = data.nodes || [];
+        allLinks = data.edges || [];
+        
+        if (allNodes.length === 0) {
+            alert('No nodes found in data');
+            showLoadingOverlay(false);
+            return;
+        }
+        
+        console.log('Loaded', allNodes.length, 'nodes and', allLinks.length, 'links');
+        
+        populateOwnerFilter();
+        applyFilters();
+        showLoadingOverlay(false);
+        
+    } catch (error) {
+        console.error('Error loading data:', error);
+        alert('Error loading data: ' + error.message);
+        showLoadingOverlay(false);
+    }
+}
+
+// Event listeners
+document.getElementById('type-filter').addEventListener('change', applyFilters);
+document.getElementById('owner-filter').addEventListener('change', applyFilters);
+document.getElementById('status-filter').addEventListener('change', applyFilters);
+document.getElementById('search-filter').addEventListener('input', applyFilters);
+
+// File input handler
+document.getElementById('jsonFileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        try {
+            const data = JSON.parse(event.target.result);
+            initializeData(data);
+        } catch (error) {
+            console.error('JSON parse error:', error);
+            alert('Invalid JSON file');
+            showLoadingOverlay(false);
+        }
+    };
+    reader.onerror = function() {
+        alert('Error reading file');
+        showLoadingOverlay(false);
+    };
+    reader.readAsText(file);
+    
+    this.value = '';
+});
+</script>
+</body>
+</html>
