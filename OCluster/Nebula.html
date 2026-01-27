@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Frontenac GIS | Feature Galaxy</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --space-bg: #f5f6f8;
+            --header-bg: linear-gradient(135deg, #088337 0%, #086e3b 100%);
+            --f-neon: #0066cc;
+            --f-green: #10b981;
+            --f-blue: #3b82f6;
+            --f-purple: #8b5cf6;
+            --f-gold: #f59e0b;
+            --glass: rgba(255, 255, 255, 0.95);
+            --border: rgba(0, 0, 0, 0.12);
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --header-text: white;
+            --header-shadow: rgba(0, 102, 204, 0.15);
+        }
+        body.dark-mode {
+            --space-bg: #0a0f19;
+            --header-bg: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            --f-neon: #00f2ff;
+            --glass: rgba(10, 15, 25, 0.98);
+            --border: rgba(255, 255, 255, 0.15);
+            --text-dark: #e5e7eb;
+            --text-light: #9ca3af;
+            --header-text: white;
+            --header-shadow: rgba(0, 242, 255, 0.1);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--space-bg); color: var(--text-dark); font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; transition: background 0.3s, color 0.3s; }
+        header {
+            position: fixed; top: 0; left: 0; right: 0; height: 70px;
+            background: var(--header-bg);
+            backdrop-filter: blur(20px);
+            border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 30px; z-index: 2000; box-shadow: 0 4px 16px var(--header-shadow);
+            transition: all 0.3s;
+        }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .header-left img { height: 28px; }
+        .header-left h1 { font-size: 13px; letter-spacing: 2.5px; font-weight: 900; color: var(--header-text); }
+        .header-controls { display: flex; gap: 12px; align-items: center; }
+        .theme-toggle {
+            background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.3);
+            color: var(--header-text); padding: 8px 12px; border-radius: 6px; cursor: pointer;
+            font-size: 14px; outline: none; transition: all 0.2s; backdrop-filter: blur(10px);
+        }
+        .theme-toggle:hover { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.5); }
+        .search-container { position: relative; }
+        #search { 
+            background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.3); color: var(--header-text); 
+            padding: 10px 14px; border-radius: 6px; font-size: 12px; width: 260px; outline: none;
+            transition: all 0.2s; backdrop-filter: blur(10px);
+        }
+        #search:focus { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.2); }
+        #search::placeholder { color: rgba(255,255,255,0.6); }
+        #match-list {
+            position: absolute; top: 45px; left: 0; width: 100%;
+            background: var(--glass); border: 1px solid var(--border);
+            max-height: 300px; overflow-y: auto; border-radius: 6px;
+            display: none; z-index: 3000; box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+        }
+        .match-item {
+            padding: 12px 14px; font-size: 12px; cursor: pointer;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            display: flex; justify-content: space-between; align-items: center;
+            transition: background 0.2s; color: var(--text-dark);
+        }
+        body.dark-mode .match-item { border-bottom-color: rgba(255,255,255,0.05); }
+        .match-item:hover { background: rgba(0,102,204,0.1); }
+        body.dark-mode .match-item:hover { background: rgba(0,242,255,0.1); }
+        .header-right { display: flex; gap: 12px; align-items: center; }
+        button {
+            background: white; border: none; color: var(--f-neon);
+            padding: 10px 18px; border-radius: 6px; cursor: pointer;
+            font-size: 11px; font-weight: 700; text-transform: uppercase;
+            transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        body.dark-mode button {
+            background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.2); color: var(--f-neon);
+        }
+        button:hover { background: rgba(255,255,255,0.9); box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateY(-1px); }
+        body.dark-mode button:hover { background: rgba(255,255,255,0.15); box-shadow: 0 4px 12px rgba(0,242,255,0.15); }
+        
+        #jsonFileInput { display: none; }
+        
+        #loadingOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+            z-index: 5000; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        #loadingOverlay.show { opacity: 1; pointer-events: all; }
+        .loading-box {
+            background: var(--glass); padding: 40px; border-radius: 12px;
+            border: 1.5px solid var(--border); text-align: center;
+            backdrop-filter: blur(10px); box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .loading-spinner {
+            width: 40px; height: 40px; border: 3px solid var(--border);
+            border-top-color: var(--f-neon); border-radius: 50%;
+            animation: spin 1s linear infinite; margin: 0 auto 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+        .loading-subtext { font-size: 12px; color: var(--text-light); }
+        
+        #legend {
+            position: fixed; bottom: 30px; right: 30px;
+            background: var(--glass); border: 1.5px solid var(--border);
+            padding: 18px; border-radius: 8px; z-index: 2000;
+            display: flex; flex-direction: column; gap: 12px;
+            backdrop-filter: blur(10px); width: 210px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        .legend-title { font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-light); letter-spacing: 1px; }
+        .legend-item { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 600; color: var(--text-dark); cursor: pointer; transition: all 0.2s; }
+        .legend-item:hover { transform: translateX(4px); }
+        .dot { width: 12px; height: 12px; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
+        .legend-item:hover .dot { transform: scale(1.2); }
+        .line-hitbox { fill: none; stroke: transparent; stroke-width: 20px; cursor: pointer; pointer-events: all; }
+        .base-line { pointer-events: none; transition: stroke 0.3s, stroke-width 0.2s, stroke-opacity 0.2s; }
+        .link-group:hover .base-line {
+            stroke-opacity: 1 !important; stroke-width: 6px !important;
+            filter: drop-shadow(0 0 8px rgba(0,0,0,0.25));
+        }
+        body.dark-mode .link-group:hover .base-line {
+            filter: drop-shadow(0 0 8px rgba(0,242,255,0.25));
+        }
+        @keyframes flow-loop { from { stroke-dashoffset: 800; } to { stroke-dashoffset: 0; } }
+        .active-trace {
+            stroke-dasharray: 12, 24; animation: flow-loop 8s linear infinite !important;
+            stroke-opacity: 1 !important; stroke-width: 5px !important;
+            filter: drop-shadow(0 0 12px rgba(0,0,0,0.2));
+        }
+        body.dark-mode .active-trace {
+            filter: drop-shadow(0 0 12px rgba(0,242,255,0.3));
+        }
+        #hud-sidebar {
+            position: fixed; top: 90px; left: -360px; width: 340px;
+            max-height: calc(100vh - 120px); background: var(--glass); 
+            backdrop-filter: blur(20px); border: 1.5px solid var(--border); border-radius: 8px;
+            z-index: 1000; transition: left 0.5s cubic-bezier(0.2, 1, 0.3, 1); 
+            overflow: hidden; display: flex; flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+        }
+        #hud-sidebar.open { left: 25px; }
+        .sidebar-header {
+            padding: 20px; border-bottom: 1px solid var(--border);
+            background: linear-gradient(135deg, rgba(0,102,204,0.08) 0%, transparent 100%);
+            transition: all 0.3s;
+        }
+        body.dark-mode .sidebar-header {
+            background: linear-gradient(135deg, rgba(0,242,255,0.08) 0%, transparent 100%);
+        }
+        .sidebar-label { font-size: 9px; color: var(--text-light); text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; }
+        #active-asset { font-size: 20px; font-weight: 900; margin: 8px 0; }
+        .cluster-stats {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;
+        }
+        .stat-box {
+            background: rgba(0,0,0,0.05); padding: 10px; border-radius: 6px; border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+        body.dark-mode .stat-box {
+            background: rgba(255,255,255,0.05);
+        }
+        .stat-label { font-size: 8px; color: var(--text-light); font-weight: 700; text-transform: uppercase; }
+        .stat-value { font-size: 18px; font-weight: 900; color: var(--f-neon); margin-top: 4px; }
+        #registry-drilldown { padding: 15px; overflow-y: auto; flex: 1; transition: all 0.3s; }
+        .tree-item { margin-bottom: 12px; }
+        .tree-node {
+            padding: 10px 12px; font-size: 11px; cursor: pointer; border-radius: 6px;
+            background: rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: space-between;
+            transition: all 0.2s; border: 1.5px solid var(--border); font-weight: 600;
+        }
+        body.dark-mode .tree-node {
+            background: rgba(255,255,255,0.05);
+        }
+        .tree-node:hover { 
+            background: rgba(0,102,204,0.12); border-color: var(--f-neon);
+            transform: translateX(3px);
+        }
+        .tree-node span:first-child {
+            font-family: monospace;
+            font-weight: bold;
+            color: var(--f-neon);
+        }
+        body.dark-mode .tree-node:hover {
+            background: rgba(0,242,255,0.12);
+        }
+        .tree-node.active {
+            background: rgba(0,102,204,0.15); border-color: var(--f-neon); color: var(--f-neon);
+        }
+        body.dark-mode .tree-node.active {
+            background: rgba(0,242,255,0.15);
+        }
+        .tree-toggle {
+            width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.06); border-radius: 3px; font-size: 10px; font-weight: bold;
+            margin-right: 6px; transition: all 0.2s;
+        }
+        body.dark-mode .tree-toggle {
+            background: rgba(255,255,255,0.1);
+        }
+        .tree-node:hover .tree-toggle { background: rgba(0,102,204,0.2); }
+        body.dark-mode .tree-node:hover .tree-toggle { background: rgba(0,242,255,0.2); }
+        .tree-children {
+            margin-left: 20px; margin-top: 6px; display: none;
+        }
+        .tree-children.open { display: block; }
+        .node-count {
+            font-size: 9px; background: rgba(0,0,0,0.1); padding: 2px 6px;
+            border-radius: 3px; margin-left: 6px; font-weight: 700;
+            transition: all 0.3s;
+        }
+        body.dark-mode .node-count {
+            background: rgba(255,255,255,0.15);
+        }
+        #viz { width: 100vw; height: 100vh; background: var(--space-bg); transition: background 0.3s; }
+        #tooltip { 
+            position: fixed; pointer-events: none; background: var(--glass); 
+            border: 1.5px solid var(--border); padding: 10px 14px; font-size: 11px; 
+            opacity: 0; z-index: 4000; border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-width: 200px;
+            transition: all 0.2s;
+        }
+        .tooltip-type { font-size: 9px; color: var(--text-light); margin-top: 4px; font-weight: 700; }
+        .tooltip-count { font-size: 9px; color: var(--text-light); margin-top: 2px; }
+        .node-group { cursor: pointer; pointer-events: all; transition: opacity 0.3s; }
+        .node-circle { transition: r 0.3s, filter 0.3s; }
+        
+        .node-circle.selected {
+            stroke-width: 4px !important;
+            filter: drop-shadow(0 0 16px rgba(0, 102, 204, 0.8)) drop-shadow(0 0 8px rgba(0, 102, 204, 0.6)) !important;
+        }
+        
+        body.dark-mode .node-circle.selected {
+            filter: drop-shadow(0 0 16px rgba(0, 242, 255, 0.8)) drop-shadow(0 0 8px rgba(0, 242, 255, 0.6)) !important;
+        }
+
+        .node-abandoned {
+            stroke-dasharray: 5, 3;
+            stroke: #ef4444 !important;
+            stroke-width: 6px !important;
+            filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.4));
+            animation: ghost-float 3s ease-in-out infinite;
+        }
+
+        @keyframes ghost-float {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.95); }
+        }
+
+        .abandoned-badge {
+            background: #ef4444;
+            color: white;
+            font-size: 9px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 900;
+            margin-left: 10px;
+            display: none;
+        }
+
+        .view-arcgis-btn {
+            display: block;
+            width: 100%;
+            margin-top: 15px;
+            background: var(--f-neon) !important;
+            color: white !important;
+            text-align: center;
+            text-decoration: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: 900;
+            font-size: 11px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        .view-arcgis-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 242, 255, 0.4);
+        }
+        
+        .tree-link-icon {
+            margin-left: 8px;
+            text-decoration: none;
+            opacity: 0.6;
+        }
+        .tree-link-icon:hover { opacity: 1; }
+        
+        #data-status {
+            position: fixed; top: 80px; left: 30px; z-index: 1500;
+            background: var(--glass); border: 1.5px solid var(--border);
+            padding: 12px 16px; border-radius: 6px; font-size: 12px;
+            backdrop-filter: blur(10px); box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        #data-status.show { opacity: 1; pointer-events: auto; }
+        .status-icon { margin-right: 8px; }
+    </style>
+</head>
+<body>
+<header>
+        <div class="header-left" style="display: flex; align-items: center; gap: 14px;">
+            <img src="https://www.frontenaccounty.ca/en/images/structure/logo.svg" 
+                alt="Frontenac County Logo" 
+                style="height: 38px; width: auto;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <h1 style="font-size: 13px; letter-spacing: 2px; font-weight: 900; color: var(--header-text); margin: 0; white-space: nowrap;">
+                    AGOL CLUSTER
+                </h1>
+                <span style="color: rgba(255,255,255,0.4); font-weight: 300; font-size: 18px;">|</span>
+                <span style="font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.9); letter-spacing: 0.5px; white-space: nowrap;">
+                    Made with ❤️ in Frontenac
+                </span>
+            </div>
+        </div>
+        <div class="header-controls">
+        <div class="search-container">
+            <input type="text" id="search" autocomplete="off" placeholder="Search assets...">
+            <div id="match-list"></div>
+        </div>
+        <button class="theme-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+            <span id="theme-icon">🌙</span>
+        </button>
+        <button onclick="document.getElementById('jsonFileInput').click()" title="Load JSON data file">📂 Load Data</button>
+        <button onclick="resetToGalaxy()">Reset View</button>
+    </div>
+</header>
+
+<input type="file" id="jsonFileInput" accept=".json">
+
+<div id="loadingOverlay">
+    <div class="loading-box">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading visualization...</div>
+        <div class="loading-subtext">Processing graph data</div>
+    </div>
+</div>
+
+<div id="data-status">
+    <span class="status-icon">✓</span>
+    <span id="status-text">Data loaded</span>
+</div>
+
+<div id="legend">
+    <div class="legend-title">Filter by Type</div>
+    <div class="legend-item" onclick="filterByGroup('FEATURES')">
+        <div class="dot" style="background:var(--f-green)"></div> Features
+    </div>
+    <div class="legend-item" onclick="filterByGroup('MAPS')">
+        <div class="dot" style="background:var(--f-blue)"></div> Maps
+    </div>
+    <div class="legend-item" onclick="filterByGroup('APPS')">
+        <div class="dot" style="background:var(--f-purple)"></div> Apps
+    </div>
+    <div class="legend-item" onclick="filterByGroup('OTHER')">
+        <div class="dot" style="background:var(--f-gold)"></div> Other
+    </div>
+    <div class="legend-item" onclick="filterAbandoned()">
+        <div class="dot" style="border: 2px dashed #ef4444; background: transparent;"></div> Space Junk
+    </div>
+    <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border);">
+    <div class="legend-item" onclick="resetToGalaxy()" style="color: var(--f-neon); font-weight: 700;">
+        ↻ Clear Filter
+    </div>
+</div>
+
+<div id="hud-sidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-label">Active Asset</div>
+        <div id="active-asset" style="color: var(--f-neon);">Select Node</div>
+        
+        <a id="arcgis-link" href="#" target="_blank" class="view-arcgis-btn" style="display:none;">
+            🌐 View in ArcGIS Portal
+        </a>
+
+        <div class="cluster-stats">
+            <div class="stat-box">
+                <div class="stat-label">Blast Radius</div>
+                <div class="stat-value" id="stat-blast">0</div>
+                <div class="stat-label" style="font-size:7px;">Items Affected</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Dependencies</div>
+                <div class="stat-value" id="stat-deps">0</div>
+                <div class="stat-label" style="font-size:7px;">Required to Run</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Connections</div>
+                <div class="stat-value" id="stat-connections">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Total Views</div>
+                <div class="stat-value" id="stat-views">0</div>
+            </div>
+        </div>
+    </div>
+    <div id="registry-drilldown">
+        <div id="tree-container"></div>
+    </div>
+</div>
+<div id="tooltip"></div>
+<div id="viz"></div>
+
+<script>
+let nodes = [], links = [], orbitAngle = 0, isSpinning = true;
+const width = window.innerWidth, height = window.innerHeight;
+let currentFocusId = null;
+let vizInitialized = false;
+
+const isDarkModeStored = localStorage.getItem('darkMode') === 'true';
+if (isDarkModeStored) {
+    document.body.classList.add('dark-mode');
+    document.getElementById('theme-icon').textContent = '☀️';
+}
+
+function toggleDarkMode() {
+    const isDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', isDark);
+    document.getElementById('theme-icon').textContent = isDark ? '☀️' : '🌙';
+}
+
+const svg = d3.select("#viz").append("svg").attr("width", width).attr("height", height)
+    .on("click", (e) => { if(e.target.tagName === 'svg') resetToGalaxy(); });
+const mainG = svg.append("g");
+const orbitG = mainG.append("g");
+const zoom = d3.zoom().scaleExtent([0.005, 15]).on("zoom", (e) => {
+    mainG.attr("transform", e.transform);
+});
+svg.call(zoom);
+
+const sim = d3.forceSimulation()
+    .force("link", d3.forceLink().id(d => d.id).distance(280))
+    .force("charge", d3.forceManyBody().strength(-2000))
+    .force("center", d3.forceCenter(width / 2, height / 2));
+
+function getColorValue(type) {
+    if (!type) return "#f59e0b";
+    const t = type.toLowerCase();
+    if (t.includes("feature")) return '#10b981';
+    if (t.includes("web map")) return '#3b82f6';
+    if (t.includes("application") || t.includes("dashboard")) return '#8b5cf6';
+    return '#f59e0b';
+}
+
+function showLoadingOverlay(show = true) {
+    const overlay = document.getElementById('loadingOverlay');
+    if (show) {
+        overlay.classList.add('show');
+    } else {
+        overlay.classList.remove('show');
+    }
+}
+
+function showStatus(message, duration = 3000) {
+    const status = document.getElementById('data-status');
+    document.getElementById('status-text').textContent = message;
+    status.classList.add('show');
+    setTimeout(() => status.classList.remove('show'), duration);
+}
+
+function initializeVisualization(data) {
+    showLoadingOverlay(true);
+    
+    try {
+        // Reset existing visualization
+        if (vizInitialized) {
+            orbitG.selectAll("*").remove();
+        }
+        
+        nodes = data.nodes || [];
+        const rawLinks = data.edges || [];
+        
+        // Debug logging
+        console.log('=== DATA LOADED ===');
+        console.log('Nodes:', nodes.length);
+        console.log('Raw Links:', rawLinks.length);
+        console.log('First node:', nodes[0]);
+        console.log('First link:', rawLinks[0]);
+        
+        // Normalize links: convert string IDs to node OBJECTS (not just strings)
+        // This is critical - D3 forceLink needs actual node references, not just IDs
+        links = rawLinks
+            .filter(l => {
+                const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+                const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+                return nodes.find(n => n.id === sourceId) && nodes.find(n => n.id === targetId);
+            })
+            .map(l => {
+                const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+                const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+                return {
+                    source: nodes.find(n => n.id === sourceId),
+                    target: nodes.find(n => n.id === targetId),
+                    type: l.type
+                };
+            });
+        
+        console.log('Normalized Links:', links.length);
+        console.log('First normalized link:', links[0]);
+        console.log('Link 0 source is node object?', typeof links[0].source === 'object' && links[0].source.id);
+        console.log('Link 0 target is node object?', typeof links[0].target === 'object' && links[0].target.id);
+        
+        // Validate data
+        if (nodes.length === 0) {
+            showStatus('❌ Error: No nodes found in data', 5000);
+            showLoadingOverlay(false);
+            return;
+        }
+        
+        // Initialize node positions randomly to spread them out
+        nodes.forEach((node, i) => {
+            node.x = width / 2 + (Math.random() - 0.5) * width * 0.8;
+            node.y = height / 2 + (Math.random() - 0.5) * height * 0.8;
+            node.vx = 0;
+            node.vy = 0;
+        });
+        
+        console.log('Initialized random positions');
+
+        const linkContainer = orbitG.append("g").selectAll(".link-group")
+            .data(links).enter().append("g").attr("class", "link-group");
+        linkContainer.append("line").attr("class", "line-hitbox");
+        const link = linkContainer.append("line")
+            .attr("class", "base-line")
+            .attr("stroke", d => {
+                const targetNode = nodes.find(n => n.id === d.target);
+                return getColorValue(targetNode ? targetNode.type : null);
+            })
+            .attr("stroke-opacity", 0.5)
+            .attr("stroke-width", 3.5)
+            .style("filter", "drop-shadow(0 1px 3px rgba(0,0,0,0.1))");
+
+        const node = orbitG.append("g").selectAll(".node-group").data(nodes).enter().append("g")
+            .attr("class", "node-group")
+            .on("click", (e, d) => { e.stopPropagation(); focusOn(d); })
+            .on("mouseover", (e, d) => {
+                const count = getLinkCount(d.id);
+                d3.select("#tooltip").style("opacity", 1)
+                    .html(`<strong>${d.label}</strong><div class="tooltip-type">${d.type}</div><div class="tooltip-count">${count} connection${count !== 1 ? 's' : ''}</div>`)
+                    .style("left", (e.pageX+15)+"px").style("top", (e.pageY-10)+"px");
+            })
+            .on("mouseout", () => d3.select("#tooltip").style("opacity", 0));
+
+        node.append("circle").attr("class", "node-circle")
+            .attr("r", d => 22 + (getLinkCount(d.id) * 2.2))
+            .attr("fill", d => getColorValue(d.type))
+            .style("stroke", "#fff")
+            .style("stroke-width", "2.5px")
+            .classed("node-abandoned", d => d.is_abandoned)
+            .style("filter", "drop-shadow(0 2px 8px rgba(0,0,0,0.15))");
+
+        let tickCount = 0;
+        
+        sim.nodes(nodes).on("tick", () => {
+            tickCount++;
+            // Update links
+            d3.selectAll(".link-group line").attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+            // Update nodes
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        sim.force("link").links(links);
+        
+        console.log('Running simulation...');
+        console.log('Links after assignment to force:');
+        console.log('Link 0 source is object?', typeof links[0].source === 'object');
+        console.log('Link 0 target is object?', typeof links[0].target === 'object');
+        if (typeof links[0].source === 'object') {
+            console.log('Link 0 source node:', links[0].source.id, links[0].source.label);
+            console.log('Link 0 target node:', links[0].target.id, links[0].target.label);
+        }
+        
+        sim.on("end", () => {
+            console.log('Simulation converged after', tickCount, 'ticks');
+            console.log('Sample node positions:');
+            console.log('Node 0:', nodes[0].x, nodes[0].y);
+            console.log('Node 100:', nodes[100].x, nodes[100].y);
+            console.log('Node 500:', nodes[500].x, nodes[500].y);
+            console.log('Sample links with positions:');
+            console.log('Link 0:', links[0].source.x, links[0].source.y, '->', links[0].target.x, links[0].target.y);
+        });
+        
+        // Force simulation to run longer
+        sim.alpha(1).restart();
+        
+        // Wait a bit, then reset view
+        setTimeout(() => {
+            resetToGalaxy();
+        }, 1000);
+        
+        d3.timer(() => { if (isSpinning) { orbitAngle += 0.005; orbitG.attr("transform", `rotate(${orbitAngle}, ${width / 2}, ${height / 2})`); } });
+        
+        vizInitialized = true;
+        showLoadingOverlay(false);
+        showStatus(`✓ Loaded ${nodes.length} assets`);
+        
+    } catch (error) {
+        console.error('Visualization error:', error);
+        showStatus('❌ Error initializing visualization', 5000);
+        showLoadingOverlay(false);
+    }
+}
+
+function getLinkCount(id) {
+    return links.filter(l => {
+        const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+        const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+        return sourceId === id || targetId === id;
+    }).length;
+}
+
+function buildNestedTree(startId, depth = 0, visited = new Set()) {
+    if (depth > 3 || visited.has(startId)) return null; 
+    visited.add(startId);
+
+    const node = nodes.find(n => n.id === startId);
+    if (!node) return null;
+
+    // Crawler Direction: Source (Consumer) -> Target (Provider)
+    const downstream = links
+        .filter(l => {
+            const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+            return targetId === startId;
+        })
+        .map(l => {
+            const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+            return { id: sourceId, relType: "Upstream (Provider)" };
+        });
+    
+    const upstream = links
+        .filter(l => {
+            const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+            return sourceId === startId;
+        })
+        .map(l => {
+            const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+            return { id: targetId, relType: "Downstream (Consumer)" };
+        });
+    
+    const allConnections = [...downstream, ...upstream];
+
+    const children = allConnections.map(conn => {
+        const childTree = buildNestedTree(conn.id, depth + 1, new Set(visited));
+        if (childTree) { childTree.relDirection = conn.relType; return childTree; }
+        return null;
+    }).filter(n => n !== null);
+
+    return { id: node.id, label: node.label, type: node.type, count: allConnections.length, children: children };
+}
+
+function updateTreeDrilldown(activeNode) {
+    const container = document.getElementById('tree-container');
+    container.innerHTML = '<div class="sidebar-label" style="margin-bottom:15px;">Relationship Hierarchy</div>';
+    const treeData = buildNestedTree(activeNode.id);
+    if (treeData && treeData.children.length > 0) { renderTreeItem(treeData, container, true); } 
+    else { container.innerHTML += '<div style="font-size:11px; opacity:0.6; padding:20px; text-align:center;">No relationships detected.</div>'; }
+}
+
+function renderTreeItem(item, container, isRoot = false) {
+    const div = document.createElement('div');
+    div.className = 'tree-item';
+    const nodeDiv = document.createElement('div');
+    nodeDiv.className = isRoot ? 'tree-node active' : 'tree-node';
+    nodeDiv.style.borderLeft = `4px solid ${getColorValue(item.type)}`;
+    
+    const dirIcon = document.createElement('span');
+    dirIcon.style.fontSize = '8px'; dirIcon.style.marginRight = '8px'; dirIcon.style.opacity = '0.5';
+    dirIcon.textContent = isRoot ? '⊙' : (item.relDirection.includes('Upstream') ? '▲' : '▼');
+    nodeDiv.appendChild(dirIcon);
+
+    const label = document.createElement('span');
+    label.textContent = item.label; label.style.flex = '1'; label.style.whiteSpace = 'nowrap'; label.style.overflow = 'hidden'; label.style.textOverflow = 'ellipsis';
+    nodeDiv.appendChild(label);
+
+    const sourceNode = nodes.find(n => n.id === item.id);
+    if (sourceNode && sourceNode.url) {
+        const urlIcon = document.createElement('a');
+        urlIcon.innerHTML = ' ↗'; urlIcon.href = sourceNode.url; urlIcon.target = '_blank';
+        urlIcon.className = 'tree-link-icon'; urlIcon.onclick = (e) => e.stopPropagation();
+        nodeDiv.appendChild(urlIcon);
+    }
+    nodeDiv.onclick = (e) => { e.stopPropagation(); focusOn(nodes.find(n => n.id === item.id)); };
+    div.appendChild(nodeDiv);
+    if (item.children && item.children.length > 0) {
+        const childrenDiv = document.createElement('div');
+        childrenDiv.className = 'tree-children open';
+        item.children.forEach(child => renderTreeItem(child, childrenDiv));
+        div.appendChild(childrenDiv);
+    }
+    container.appendChild(div);
+}
+
+function focusOn(d) {
+    if (!d) return;
+    currentFocusId = d.id;
+    isSpinning = false;
+    const lineage = getLineage(d.id);
+    const clusterColor = getColorValue(d.type);
+    document.getElementById('hud-sidebar').classList.add('open');
+    const assetTitle = document.getElementById('active-asset');
+    assetTitle.innerHTML = d.label;
+    assetTitle.style.color = clusterColor;
+    if (d.is_abandoned) { assetTitle.innerHTML += '<span class="abandoned-badge" style="display:inline">SPACE JUNK</span>'; }
+
+    // Update Stats from ItemGraph
+    document.getElementById('stat-blast').innerText = d.dependency_info ? d.dependency_info.total_recursive_dependents : "0";
+    document.getElementById('stat-deps').innerText = d.dependency_info ? d.dependency_info.total_recursive_dependencies : "0";
+    document.getElementById('stat-connections').innerText = getLinkCount(d.id);
+    document.getElementById('stat-views').innerText = d.views ? d.views.toLocaleString() : "0";
+
+    const linkBtn = document.getElementById('arcgis-link');
+    if (d.url) { linkBtn.href = d.url; linkBtn.style.display = 'block'; } else { linkBtn.style.display = 'none'; }
+    document.getElementById('match-list').style.display = 'none';
+
+    // Remove selected class from all nodes
+    d3.selectAll(".node-circle").classed("selected", false);
+    
+    // Add selected class to clicked node
+    d3.selectAll(".node-circle").classed("selected", node => node.id === d.id);
+
+    d3.selectAll(".base-line")
+        .classed("active-trace", l => {
+            const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+            const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+            return lineage.has(sourceId) && lineage.has(targetId);
+        })
+        .attr("stroke", l => {
+             const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+             const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+             return (lineage.has(sourceId) && lineage.has(targetId)) ? clusterColor : "rgba(0,0,0,0.12)";
+        })
+        .attr("stroke-opacity", l => {
+             const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+             const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+             return (lineage.has(sourceId) && lineage.has(targetId)) ? 0.9 : 0.25;
+        });
+
+    d3.selectAll(".node-group").attr("opacity", n => lineage.has(n.id) ? 1 : 0.12);
+
+    const rad = (orbitAngle * Math.PI) / 180;
+    const rx = (d.x - width/2) * Math.cos(rad) - (d.y - height/2) * Math.sin(rad) + width/2;
+    const ry = (d.x - width/2) * Math.sin(rad) + (d.y - height/2) * Math.cos(rad) + height/2;
+    svg.transition().duration(800).call(zoom.transform, d3.zoomIdentity.translate(width/2 + 160, height/2).scale(0.8).translate(-rx, -ry));
+    updateTreeDrilldown(d);
+}
+
+function filterByGroup(group) {
+    if (!vizInitialized) return;
+    d3.selectAll(".node-group").transition().duration(400).attr("opacity", d => {
+        const color = getColorValue(d.type);
+        const groupColor = group === 'FEATURES' ? '#10b981' : group === 'MAPS' ? '#3b82f6' : group === 'APPS' ? '#8b5cf6' : '#f59e0b';
+        return color === groupColor ? 1 : 0.12;
+    });
+}
+
+function filterAbandoned() {
+    if (!vizInitialized) return;
+    d3.selectAll(".node-group").transition().duration(400).attr("opacity", d => d.is_abandoned ? 1 : 0.05);
+}
+
+function getLineage(id, set = new Set()) {
+    if (set.has(id)) return set; 
+    set.add(id);
+    links.forEach(l => {
+        const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+        const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+        if (sourceId === id) getLineage(targetId, set); 
+        if (targetId === id) getLineage(sourceId, set);
+    });
+    return set;
+}
+
+function resetToGalaxy() {
+    if (!vizInitialized) return;
+    isSpinning = true;
+    currentFocusId = null;
+    document.getElementById('hud-sidebar').classList.remove('open');
+    document.getElementById('match-list').style.display = 'none';
+    
+    // Remove selected class from all nodes
+    d3.selectAll(".node-circle").classed("selected", false);
+    
+    d3.selectAll(".base-line").classed("active-trace", false).attr("stroke", d => {
+            const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+            const targetNode = nodes.find(n => n.id === targetId);
+            return getColorValue(targetNode ? targetNode.type : null);
+        }).attr("stroke-opacity", 0.5);
+    d3.selectAll(".node-group").attr("opacity", 1);
+    svg.transition().duration(1200).call(zoom.transform, d3.zoomIdentity.translate(width/2, height/2).scale(0.045).translate(-width/2, -height/2));
+}
+
+document.getElementById('search').addEventListener('input', function(e) {
+    if (!vizInitialized) return;
+    const val = e.target.value.toLowerCase();
+    const list = document.getElementById('match-list');
+    if (val.length < 2) { list.style.display = 'none'; return; }
+    const matches = nodes.filter(n => n.label.toLowerCase().includes(val)).slice(0, 15);
+    if (matches.length > 0) {
+        list.style.display = 'block';
+        list.innerHTML = matches.map(m => `<div class="match-item" onclick="event.stopPropagation(); window.focusOnById('${m.id}')"><span>${m.label}</span><span style="font-size:9px; color:var(--text-light)">${m.type}</span></div>`).join('');
+    } else { list.style.display = 'none'; }
+});
+
+window.focusOnById = function(id) { 
+    if (!vizInitialized) return;
+    const node = nodes.find(n => n.id === id); 
+    if (node) focusOn(node); 
+};
+
+// File input handler
+document.getElementById('jsonFileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        try {
+            const data = JSON.parse(event.target.result);
+            initializeVisualization(data);
+        } catch (error) {
+            console.error('JSON parse error:', error);
+            showStatus('❌ Invalid JSON file', 5000);
+            showLoadingOverlay(false);
+        }
+    };
+    reader.onerror = function() {
+        showStatus('❌ Error reading file', 5000);
+        showLoadingOverlay(false);
+    };
+    reader.readAsText(file);
+    
+    // Reset file input so same file can be selected again
+    this.value = '';
+});
+</script>
+</body>
+</html>
