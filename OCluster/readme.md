@@ -1,4 +1,4 @@
-# AGOL Content Galaxy 🌌
+# AGOL Content Galaxy 
 
 **Visualize and trace deep dependencies between ArcGIS Portal items, from Feature Layers to Apps.**
 
@@ -7,7 +7,7 @@ it maps relationships that the standard ArcGIS interface often misses - such as 
 
 ---
 
-## 🚀 How It Works
+## How It Works
 
 The project consists of two distinct components:
 
@@ -26,7 +26,7 @@ The project consists of two distinct components:
 
 ---
 
-## 🛠️ Setup & Usage
+## Setup & Usage
 
 ### 1. Generate the Data
 
@@ -64,6 +64,9 @@ python crawler.py
 
 Because the frontend loads a local JSON file, you must run it via a web server (to avoid CORS browser security blocks).
 
+**Update :** A standalone version is available as `Nebula.html`. You can open this file directly in any browser and run the entire application locally.
+Use the Load Data button to select your JSON file, and the full functionality becomes available - no servers and no client setup required.
+
 **Option A (Quickest):**
 
 ```bash
@@ -79,7 +82,7 @@ Upload `index.html` and `content_graph.json` to any web server (IIS, GitHub Page
 
 ---
 
-## 🎨 Visual Guide & Metrics
+## Visual Guide & Metrics
 
 | Asset Type | Color | Description |
 | --- | --- | --- |
@@ -89,7 +92,7 @@ Upload `index.html` and `content_graph.json` to any web server (IIS, GitHub Page
 | **Space Junk** | 🔴 Red (Glow) | **Abandoned Nodes:** Items with 0 connections floating in the void. |
 
 ---
-### 📊 Advanced Metrics in Sidebar
+### Advanced Metrics in Sidebar
 
 * **Blast Radius:** The total count of recursive dependents. A high number means many apps/maps will break if this item is modified.
 * **Dependencies:** The total count of items this asset requires to function properly.
@@ -97,7 +100,7 @@ Upload `index.html` and `content_graph.json` to any web server (IIS, GitHub Page
 
 ---
 
-## ⌨️ Interface Controls
+## Interface Controls
 
 * **Scroll/Pinch:** Zoom from the "Galaxy" view (0.045x) down to individual asset labels.
 * **Click Node:** Enters **Focus Mode**. Isolates the lineage and opens the **Relationship Hierarchy** tree.
@@ -108,7 +111,7 @@ Upload `index.html` and `content_graph.json` to any web server (IIS, GitHub Page
 
 ---
 
-## 🛰️ Data Exports
+## Data Exports
 
 The crawler now generates two distinct output files to support different workflows:
 
@@ -120,7 +123,7 @@ The crawler now generates two distinct output files to support different workflo
 
 ---
 
-## 📝 Technical Notes
+## Technical Notes
 
 * **Recursive Analysis:** Unlike standard crawlers, this project calculates "recursive blast radius," meaning it knows if a Feature Layer is used in a Map that is used in a Dashboard that is embedded in a Hub Site.
 * **GML Schema:** The GML output follows the standard `node` and `edge` schema, preserving all AGOL metadata (Item ID, Type, Owner) as attributes within the XML structure.
