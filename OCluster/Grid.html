@@ -678,12 +678,30 @@
             <thead>
                 <tr>
                     <th></th>
-                    <th>Title</th>
-                    <th>Type</th>
-                    <th>Owner</th>
-                    <th>Views</th>
-                    <th>Risk Level</th>
-                    <th>Status</th>
+                    <th style="cursor: pointer; user-select: none;" onclick="setSortColumn('title'); event.stopPropagation();">
+                        Title
+                        <span id="sort-title" style="margin-left: 4px; opacity: 0.5;">⇅</span>
+                    </th>
+                    <th style="cursor: pointer; user-select: none;" onclick="setSortColumn('type'); event.stopPropagation();">
+                        Type
+                        <span id="sort-type" style="margin-left: 4px; opacity: 0.5;">⇅</span>
+                    </th>
+                    <th style="cursor: pointer; user-select: none;" onclick="setSortColumn('owner'); event.stopPropagation();">
+                        Owner
+                        <span id="sort-owner" style="margin-left: 4px; opacity: 0.5;">⇅</span>
+                    </th>
+                    <th style="cursor: pointer; user-select: none;" onclick="setSortColumn('views'); event.stopPropagation();">
+                        Views
+                        <span id="sort-views" style="margin-left: 4px; opacity: 0.5;">⇅</span>
+                    </th>
+                    <th style="cursor: pointer; user-select: none;" onclick="setSortColumn('risk'); event.stopPropagation();">
+                        Risk Level
+                        <span id="sort-risk" style="margin-left: 4px; opacity: 0.5;">⇅</span>
+                    </th>
+                    <th style="cursor: pointer; user-select: none;" onclick="setSortColumn('status'); event.stopPropagation();">
+                        Status
+                        <span id="sort-status" style="margin-left: 4px; opacity: 0.5;">⇅</span>
+                    </th>
                 </tr>
             </thead>
             <tbody id="table-body">
@@ -697,6 +715,8 @@
 let allNodes = [];
 let allLinks = [];
 let filteredNodes = [];
+let sortBy = 'title';
+let sortOrder = 'asc'; // 'asc' or 'desc'
 
 const isDarkModeStored = localStorage.getItem('darkMode') === 'true';
 if (isDarkModeStored) {
@@ -877,6 +897,84 @@ function copyItemId(itemId, e) {
     copyToClipboard(itemId);
 }
 
+function setSortColumn(column) {
+    // If clicking the same column, toggle order
+    if (sortBy === column) {
+        sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortBy = column;
+        sortOrder = 'asc';
+    }
+    
+    updateSortIndicators();
+    applyFilters();
+}
+
+function updateSortIndicators() {
+    // Reset all indicators
+    document.getElementById('sort-title').textContent = '⇅';
+    document.getElementById('sort-type').textContent = '⇅';
+    document.getElementById('sort-owner').textContent = '⇅';
+    document.getElementById('sort-views').textContent = '⇅';
+    document.getElementById('sort-risk').textContent = '⇅';
+    document.getElementById('sort-status').textContent = '⇅';
+    
+    // Reset opacity
+    document.querySelectorAll('th span').forEach(span => span.style.opacity = '0.5');
+    
+    // Set active indicator
+    const activeId = `sort-${sortBy}`;
+    const activeElement = document.getElementById(activeId);
+    if (activeElement) {
+        activeElement.textContent = sortOrder === 'asc' ? '↑' : '↓';
+        activeElement.style.opacity = '1';
+    }
+}
+
+function sortNodes(nodes) {
+    const sorted = [...nodes];
+    
+    sorted.sort((a, b) => {
+        let aVal, bVal;
+        
+        switch(sortBy) {
+            case 'title':
+                aVal = a.label.toLowerCase();
+                bVal = b.label.toLowerCase();
+                break;
+            case 'type':
+                aVal = getTypeLabel(a.type).toLowerCase();
+                bVal = getTypeLabel(b.type).toLowerCase();
+                break;
+            case 'owner':
+                aVal = (a.owner || '').toLowerCase();
+                bVal = (b.owner || '').toLowerCase();
+                break;
+            case 'views':
+                aVal = a.views || 0;
+                bVal = b.views || 0;
+                break;
+            case 'risk':
+                const riskOrder = { 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1 };
+                aVal = riskOrder[getRiskLevel(a).level];
+                bVal = riskOrder[getRiskLevel(b).level];
+                break;
+            case 'status':
+                aVal = a.is_abandoned ? 1 : 0;
+                bVal = b.is_abandoned ? 1 : 0;
+                break;
+            default:
+                return 0;
+        }
+        
+        if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+        return 0;
+    });
+    
+    return sorted;
+}
+
 function applyFilters() {
     const typeFilter = document.getElementById('type-filter').value;
     const ownerFilter = document.getElementById('owner-filter').value;
@@ -898,6 +996,9 @@ function applyFilters() {
         
         return true;
     });
+    
+    // Apply sorting
+    filteredNodes = sortNodes(filteredNodes);
     
     updateStats();
     renderTable();
@@ -1092,6 +1193,7 @@ function initializeData(data) {
         
         populateOwnerFilter();
         applyFilters();
+        updateSortIndicators();
         showLoadingOverlay(false);
         
     } catch (error) {
