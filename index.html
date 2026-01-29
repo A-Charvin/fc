@@ -240,19 +240,24 @@
         <p>Explore a repository with scripts and workflows for road marking extraction and YOLO-based detection.</p>
       </li>
       <li>
-        <a href="OCluster/index.html" target="_blank"><i data-feather="code"></i> ArcGIS Content Galaxy </a>
+        <a href="OCluster/index.html" target="_blank"><i data-feather="loader"></i> ArcGIS Content Galaxy </a>
         <p>A tool to extract, analyze, and visualize dependencies between ArcGIS Portal items as an interactive content graph.</p>
-      </li>      
+      </li>
+      <li>
+        <a href="https://github.com/A-Charvin/AGOL-Backup-Utility/" target="_blank"><i data-feather="cloud-drizzle"></i> ArcGIS Content Galaxy </a>
+        <p>Comprehensive backup/restore utility for ArcGIS Online and Portal with flexible formats, incremental scanning, and GUI/CLI interfaces.</p>
+      </li>  
     </ul>
   </div>
 
   <footer>
     <img src="https://www.frontenaccounty.ca/en/images/structure/logo.svg" alt="Frontenac County Logo">
     <div>Made with ❤️ in Frontenac County.</div>
-    <span>© 2025 Frontenac County GIS</span>
+    <span>© <span id="year"></span> Frontenac County GIS</span>
   </footer>
-
+  
+  <script>document.getElementById("year").textContent = new Date().getFullYear();</script>
   <script>feather.replace()</script>
+  
 </body>
 </html>
-
