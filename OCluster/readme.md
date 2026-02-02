@@ -7,6 +7,23 @@ it maps relationships that the standard ArcGIS interface often misses - such as 
 
 ---
 
+## Access
+
+### Demo (with dummy data)
+
+Try the fully hosted demo using sample data:  
+**<https://a-charvin.github.io/fc/OCluster/index.html>**
+
+### Standalone Version (bring your own JSON)
+
+Use your own dataset with the standalone views:
+
+*   **Cluster View**  
+    <https://a-charvin.github.io/fc/OCluster/Nebula.html>
+
+*   **Tabular View**  
+    <https://a-charvin.github.io/fc/OCluster/Grid.html>
+
 ## How It Works
 
 The project consists of two distinct components:
