@@ -18,10 +18,8 @@
             --border: rgba(0, 0, 0, 0.12);
             --text-dark: #1f2937;
             --text-light: #6b7280;
-            --text-lighter: #9ca3af;
             --header-text: white;
             --header-shadow: rgba(0, 102, 204, 0.15);
-            --card-bg: #ffffff;
         }
         body.dark-mode {
             --space-bg: #0a0f19;
@@ -31,10 +29,8 @@
             --border: rgba(255, 255, 255, 0.15);
             --text-dark: #e5e7eb;
             --text-light: #9ca3af;
-            --text-lighter: #6b7280;
             --header-text: white;
             --header-shadow: rgba(0, 242, 255, 0.1);
-            --card-bg: #1a1f35;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
@@ -244,6 +240,12 @@
             padding: 14px 16px;
             border-bottom: 1px solid var(--border);
         }
+
+        td.size-cell {
+            text-align: right;
+            font-family: 'Inter', monospace;
+            font-weight: 600;
+        }
         
         tbody tr {
             transition: all 0.2s;
@@ -365,144 +367,66 @@
             font-size: 10px;
             font-weight: 800;
         }
-        
-        .connection-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 8px;
+
+        .dep-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
-        
-        .connection-item {
-            background: rgba(0, 102, 204, 0.1);
-            border: 1px solid rgba(0, 102, 204, 0.3);
-            padding: 8px 12px;
+
+        .dep-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 10px;
             border-radius: 6px;
+            background: rgba(0, 102, 204, 0.06);
+            border: 1px solid rgba(0, 102, 204, 0.2);
             font-size: 11px;
-            color: var(--f-neon);
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            transition: all 0.2s;
+            cursor: pointer;
         }
-        
-        .connection-item-type {
-            font-size: 9px;
-            opacity: 0.7;
-            text-transform: uppercase;
+
+        body.dark-mode .dep-item {
+            background: rgba(0, 242, 255, 0.08);
+            border-color: rgba(0, 242, 255, 0.25);
         }
-        
-        body.dark-mode .connection-item {
-            background: rgba(0, 242, 255, 0.1);
-            border-color: rgba(0, 242, 255, 0.3);
-            color: #00f2ff;
-        }
-        
-        .connection-item:hover {
-            background: rgba(0, 102, 204, 0.2);
+
+        .dep-item:hover {
+            background: rgba(0, 102, 204, 0.12);
             border-color: var(--f-neon);
+            transform: translateX(2px);
         }
-        
-        .no-connections {
-            color: var(--text-light);
-            font-size: 11px;
-            font-style: italic;
-        }
-        
-        .indirect-section {
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid var(--border);
-        }
-        
-        .indirect-toggle-btn {
-            background: none;
-            border: none;
+
+        .dep-arrow {
             color: var(--f-neon);
-            cursor: pointer;
-            font-size: 11px;
             font-weight: 700;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s;
+            font-size: 12px;
         }
-        
-        .indirect-toggle-btn:hover {
-            opacity: 0.8;
-        }
-        
-        .indirect-list {
-            display: none;
-            margin-top: 10px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        
-        .indirect-list.open {
-            display: block;
-        }
-        
-        .indirect-item {
-            padding: 6px 0;
-            font-size: 11px;
-            border-bottom: 1px solid rgba(0, 102, 204, 0.1);
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        
-        .indirect-item:hover {
-            color: var(--f-neon);
-            padding-left: 6px;
-        }
-        
-        .indirect-item-name {
+
+        .dep-label {
             flex: 1;
+            font-weight: 600;
+            color: var(--text-dark);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        
-        .indirect-item-type {
+
+        .dep-type {
             font-size: 9px;
-            color: var(--text-light);
-            margin-left: 8px;
             text-transform: uppercase;
-        }
-        
-        .goto-link {
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: rgba(0, 102, 204, 0.15);
             color: var(--f-neon);
-            cursor: pointer;
-            text-decoration: none;
-            font-weight: 700;
-            margin-right: 6px;
         }
-        
-        .goto-link:hover {
-            text-decoration: underline;
-        }
-        
-        .portal-link {
-            color: var(--f-gold);
-            cursor: pointer;
-            text-decoration: none;
-            font-weight: 700;
-            margin-left: 4px;
-        }
-        
-        .portal-link:hover {
-            text-decoration: underline;
-            opacity: 0.8;
-        }
-        
-        .connection-actions {
+
+        .dep-actions {
             display: flex;
             gap: 4px;
-            align-items: center;
-            margin-left: auto;
+            margin-left: 8px;
         }
         
         .action-btn {
@@ -546,43 +470,46 @@
             to { transform: translateX(400px); opacity: 0; }
         }
         
-        .sort-control {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-        
-        .sort-btn {
-            background: rgba(0, 102, 204, 0.1);
-            border: 1px solid rgba(0, 102, 204, 0.3);
-            color: var(--f-neon);
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 700;
-            transition: all 0.2s;
-        }
-        
-        body.dark-mode .sort-btn {
-            background: rgba(0, 242, 255, 0.1);
-            border-color: rgba(0, 242, 255, 0.3);
-        }
-        
-        .sort-btn:hover, .sort-btn.active {
-            background: rgba(0, 102, 204, 0.2);
-            border-color: var(--f-neon);
-        }
-        
-        body.dark-mode .sort-btn:hover, body.dark-mode .sort-btn.active {
-            background: rgba(0, 242, 255, 0.2);
-        }
-        
         .no-data {
             text-align: center;
             padding: 40px;
             color: var(--text-light);
             font-size: 14px;
+        }
+
+        .indirect-section {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .indirect-toggle-btn {
+            background: none;
+            border: none;
+            color: var(--f-neon);
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .indirect-toggle-btn:hover {
+            opacity: 0.8;
+        }
+
+        .indirect-list {
+            display: none;
+            margin-top: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .indirect-list.open {
+            display: block;
         }
     </style>
 </head>
@@ -603,7 +530,7 @@
         </div>
     </div>
     <div class="header-controls">
-        <button onclick="document.getElementById('jsonFileInput').click()">📂 Load Data</button>
+        <button onclick="document.getElementById('jsonFileInput').click()">Load Data</button>
         <button class="theme-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
             <span id="theme-icon">🌙</span>
         </button>
@@ -690,6 +617,10 @@
                         Owner
                         <span id="sort-owner" style="margin-left: 4px; opacity: 0.5;">⇅</span>
                     </th>
+                    <th style="cursor: pointer; user-select: none; text-align: right;" onclick="setSortColumn('size'); event.stopPropagation();">
+                        Size
+                        <span id="sort-size" style="margin-left: 4px; opacity: 0.5;">⇅</span>
+                    </th>
                     <th style="cursor: pointer; user-select: none;" onclick="setSortColumn('views'); event.stopPropagation();">
                         Views
                         <span id="sort-views" style="margin-left: 4px; opacity: 0.5;">⇅</span>
@@ -716,7 +647,7 @@ let allNodes = [];
 let allLinks = [];
 let filteredNodes = [];
 let sortBy = 'title';
-let sortOrder = 'asc'; // 'asc' or 'desc'
+let sortOrder = 'asc';
 
 const isDarkModeStored = localStorage.getItem('darkMode') === 'true';
 if (isDarkModeStored) {
@@ -732,11 +663,8 @@ function toggleDarkMode() {
 
 function showLoadingOverlay(show = true) {
     const overlay = document.getElementById('loadingOverlay');
-    if (show) {
-        overlay.classList.add('show');
-    } else {
-        overlay.classList.remove('show');
-    }
+    if (show) overlay.classList.add('show');
+    else overlay.classList.remove('show');
 }
 
 function getTypeClass(type) {
@@ -761,14 +689,20 @@ function getRiskLevel(node) {
     const dependents = node.dependency_info?.total_recursive_dependents || 0;
     const dependencies = node.dependency_info?.total_recursive_dependencies || 0;
     const score = dependents + dependencies;
-    
     if (score > 20) return { level: 'HIGH', class: 'risk-high' };
     if (score > 5) return { level: 'MEDIUM', class: 'risk-medium' };
     return { level: 'LOW', class: 'risk-low' };
 }
 
+function formatSize(bytes) {
+    if (!bytes && bytes !== 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    if (i === 0) return bytes + ' B';
+    return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + units[i];
+}
+
 function getDirectDependencies(nodeId) {
-    // Find all items that this node's SOURCE points to (what it depends on)
     return allLinks
         .filter(link => {
             const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
@@ -782,7 +716,6 @@ function getDirectDependencies(nodeId) {
 }
 
 function getDirectDependents(nodeId) {
-    // Find all items that have this node as their TARGET (what depends on this)
     return allLinks
         .filter(link => {
             const targetId = typeof link.target === 'object' ? link.target.id : link.target;
@@ -795,68 +728,48 @@ function getDirectDependents(nodeId) {
         .filter(n => n);
 }
 
-function getAllIndirectDependencies(nodeId, visited = new Set()) {
-    // Recursively get all items this depends on
+function getAllIndirectDependencies(nodeId, visited = new Set(), depth = 0) {
     if (visited.has(nodeId)) return [];
     visited.add(nodeId);
-    
     const directDeps = getDirectDependencies(nodeId);
-    const allIndirect = [...directDeps];
-    
+    const allIndirect = directDeps.map(n => ({ ...n, depth: depth + 1 }));
     directDeps.forEach(dep => {
-        const indirectDeps = getAllIndirectDependencies(dep.id, new Set(visited));
+        const indirectDeps = getAllIndirectDependencies(dep.id, new Set(visited), depth + 1);
         indirectDeps.forEach(ind => {
-            if (!allIndirect.find(n => n.id === ind.id)) {
-                allIndirect.push(ind);
-            }
+            if (!allIndirect.find(n => n.id === ind.id)) allIndirect.push(ind);
         });
     });
-    
     return allIndirect;
 }
 
-function getAllIndirectDependents(nodeId, visited = new Set()) {
-    // Recursively get all items that depend on this
+function getAllIndirectDependents(nodeId, visited = new Set(), depth = 0) {
     if (visited.has(nodeId)) return [];
     visited.add(nodeId);
-    
     const directDeps = getDirectDependents(nodeId);
-    const allIndirect = [...directDeps];
-    
+    const allIndirect = directDeps.map(n => ({ ...n, depth: depth + 1 }));
     directDeps.forEach(dep => {
-        const indirectDeps = getAllIndirectDependents(dep.id, new Set(visited));
+        const indirectDeps = getAllIndirectDependents(dep.id, new Set(visited), depth + 1);
         indirectDeps.forEach(ind => {
-            if (!allIndirect.find(n => n.id === ind.id)) {
-                allIndirect.push(ind);
-            }
+            if (!allIndirect.find(n => n.id === ind.id)) allIndirect.push(ind);
         });
     });
-    
     return allIndirect;
 }
 
 function goToItem(nodeId) {
-    // Find the item in filtered nodes and scroll to it
     const node = allNodes.find(n => n.id === nodeId);
     if (!node) return;
-    
-    // Reset filters to show all
     document.getElementById('type-filter').value = '';
     document.getElementById('owner-filter').value = '';
     document.getElementById('status-filter').value = '';
     document.getElementById('search-filter').value = '';
-    
     applyFilters();
-    
-    // Small delay to let rendering finish
     setTimeout(() => {
         const rowElement = document.getElementById(`row-${nodeId}`);
         if (rowElement) {
             rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             rowElement.style.backgroundColor = 'rgba(0, 102, 204, 0.2)';
-            setTimeout(() => {
-                rowElement.style.backgroundColor = '';
-            }, 2000);
+            setTimeout(() => { rowElement.style.backgroundColor = ''; }, 2000);
         }
     }, 100);
 }
@@ -866,30 +779,25 @@ function toggleIndirectList(nodeId, type) {
     const btnId = `indirect-btn-${type}-${nodeId}`;
     const list = document.getElementById(listId);
     const btn = document.getElementById(btnId);
-    
     if (list) {
-        list.style.display = list.style.display === 'none' ? 'block' : 'none';
-        btn.textContent = list.style.display === 'none' ? '▶ Show' : '▼ Hide';
+        list.classList.toggle('open');
+        btn.textContent = list.classList.contains('open') ? '▼ Hide' : '▶ Show';
     }
 }
 
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
-        // Show toast notification
         const toast = document.createElement('div');
         toast.className = 'copy-badge';
-        toast.textContent = '✓ Copied to clipboard';
+        toast.textContent = 'Copied to clipboard';
         document.body.appendChild(toast);
-        
         setTimeout(() => toast.remove(), 3000);
     });
 }
 
 function openPortal(url, e) {
     if (e) e.stopPropagation();
-    if (url) {
-        window.open(url, '_blank', 'noopener,noreferrer');
-    }
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 function copyItemId(itemId, e) {
@@ -898,33 +806,19 @@ function copyItemId(itemId, e) {
 }
 
 function setSortColumn(column) {
-    // If clicking the same column, toggle order
-    if (sortBy === column) {
-        sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-    } else {
-        sortBy = column;
-        sortOrder = 'asc';
-    }
-    
+    if (sortBy === column) sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    else { sortBy = column; sortOrder = 'asc'; }
     updateSortIndicators();
     applyFilters();
 }
 
 function updateSortIndicators() {
-    // Reset all indicators
-    document.getElementById('sort-title').textContent = '⇅';
-    document.getElementById('sort-type').textContent = '⇅';
-    document.getElementById('sort-owner').textContent = '⇅';
-    document.getElementById('sort-views').textContent = '⇅';
-    document.getElementById('sort-risk').textContent = '⇅';
-    document.getElementById('sort-status').textContent = '⇅';
-    
-    // Reset opacity
+    ['title','type','owner','size','views','risk','status'].forEach(col => {
+        const el = document.getElementById(`sort-${col}`);
+        if (el) el.textContent = '⇅';
+    });
     document.querySelectorAll('th span').forEach(span => span.style.opacity = '0.5');
-    
-    // Set active indicator
-    const activeId = `sort-${sortBy}`;
-    const activeElement = document.getElementById(activeId);
+    const activeElement = document.getElementById(`sort-${sortBy}`);
     if (activeElement) {
         activeElement.textContent = sortOrder === 'asc' ? '↑' : '↓';
         activeElement.style.opacity = '1';
@@ -933,45 +827,26 @@ function updateSortIndicators() {
 
 function sortNodes(nodes) {
     const sorted = [...nodes];
-    
     sorted.sort((a, b) => {
         let aVal, bVal;
-        
         switch(sortBy) {
-            case 'title':
-                aVal = a.label.toLowerCase();
-                bVal = b.label.toLowerCase();
-                break;
-            case 'type':
-                aVal = getTypeLabel(a.type).toLowerCase();
-                bVal = getTypeLabel(b.type).toLowerCase();
-                break;
-            case 'owner':
-                aVal = (a.owner || '').toLowerCase();
-                bVal = (b.owner || '').toLowerCase();
-                break;
-            case 'views':
-                aVal = a.views || 0;
-                bVal = b.views || 0;
-                break;
+            case 'title': aVal = a.label.toLowerCase(); bVal = b.label.toLowerCase(); break;
+            case 'type': aVal = getTypeLabel(a.type).toLowerCase(); bVal = getTypeLabel(b.type).toLowerCase(); break;
+            case 'owner': aVal = (a.owner || '').toLowerCase(); bVal = (b.owner || '').toLowerCase(); break;
+            case 'size': aVal = a.size || 0; bVal = b.size || 0; break;
+            case 'views': aVal = a.views || 0; bVal = b.views || 0; break;
             case 'risk':
                 const riskOrder = { 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1 };
                 aVal = riskOrder[getRiskLevel(a).level];
                 bVal = riskOrder[getRiskLevel(b).level];
                 break;
-            case 'status':
-                aVal = a.is_abandoned ? 1 : 0;
-                bVal = b.is_abandoned ? 1 : 0;
-                break;
-            default:
-                return 0;
+            case 'status': aVal = a.is_abandoned ? 1 : 0; bVal = b.is_abandoned ? 1 : 0; break;
+            default: return 0;
         }
-        
         if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
         if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
         return 0;
     });
-    
     return sorted;
 }
 
@@ -982,24 +857,15 @@ function applyFilters() {
     const searchFilter = document.getElementById('search-filter').value.toLowerCase();
     
     filteredNodes = allNodes.filter(node => {
-        if (typeFilter) {
-            const type = getTypeLabel(node.type).toLowerCase();
-            if (!type.includes(typeFilter)) return false;
-        }
-        
+        if (typeFilter && !getTypeLabel(node.type).toLowerCase().includes(typeFilter)) return false;
         if (ownerFilter && node.owner !== ownerFilter) return false;
-        
         if (statusFilter === 'active' && node.is_abandoned) return false;
         if (statusFilter === 'abandoned' && !node.is_abandoned) return false;
-        
         if (searchFilter && !node.label.toLowerCase().includes(searchFilter)) return false;
-        
         return true;
     });
     
-    // Apply sorting
     filteredNodes = sortNodes(filteredNodes);
-    
     updateStats();
     renderTable();
 }
@@ -1015,9 +881,23 @@ function updateStats() {
 function toggleDetails(nodeId) {
     const detailsRow = document.getElementById(`details-${nodeId}`);
     const btn = document.getElementById(`btn-${nodeId}`);
-    
     detailsRow.classList.toggle('open');
     btn.classList.toggle('open');
+}
+
+function renderDepItem(node, isDependent = false) {
+    const arrow = isDependent ? '◀' : '▶';
+    return `
+        <div class="dep-item" onclick="goToItem('${node.id}'); event.stopPropagation();" title="${node.label}">
+            <span class="dep-arrow">${arrow}</span>
+            <span class="dep-label">${node.label}</span>
+            <span class="dep-type">${getTypeLabel(node.type)}</span>
+            <div class="dep-actions">
+                ${node.url ? `<button class="action-btn" onclick="openPortal('${node.url}', event);" title="Open in AGOL">🌐</button>` : ''}
+                <button class="action-btn" onclick="copyItemId('${node.id}', event);" title="Copy ID">📋</button>
+            </div>
+        </div>
+    `;
 }
 
 function renderTable() {
@@ -1029,23 +909,16 @@ function renderTable() {
         noData.style.display = 'block';
         return;
     }
-    
     noData.style.display = 'none';
     
     let html = '';
     
     filteredNodes.forEach(node => {
         const risk = getRiskLevel(node);
-        const deps = node.dependency_info?.total_recursive_dependencies || 0;
-        const dependents = node.dependency_info?.total_recursive_dependents || 0;
-        
-        // Get actual connected items
         const directDeps = getDirectDependencies(node.id);
         const directDependents = getDirectDependents(node.id);
         const allIndirectDeps = getAllIndirectDependencies(node.id);
         const allIndirectDependents = getAllIndirectDependents(node.id);
-        
-        // Filter to only show indirect (not direct)
         const indirectDepsOnly = allIndirectDeps.filter(n => !directDeps.find(d => d.id === n.id));
         const indirectDependentsOnly = allIndirectDependents.filter(n => !directDependents.find(d => d.id === n.id));
         
@@ -1059,51 +932,33 @@ function renderTable() {
             <td><div class="cell-title">${titleContent}</div></td>
             <td><span class="type-badge ${getTypeClass(node.type)}">${getTypeLabel(node.type)}</span></td>
             <td>${node.owner || 'N/A'}</td>
+            <td class="size-cell">${formatSize(node.size)}</td>
             <td><strong>${(node.views || 0).toLocaleString()}</strong></td>
             <td><span class="${risk.class}">${risk.level}</span></td>
             <td>${node.is_abandoned ? '<span class="abandoned-badge">Space Junk</span>' : '<span style="color: var(--f-green); font-weight: 700;">Active</span>'}</td>
         </tr>
         <tr class="details-row" id="details-${node.id}">
-            <td colspan="7">
+            <td colspan="8">
                 <div class="details-cell">
                     <div class="details-content">
                         <div class="connection-section">
                             <div class="connection-title">
-                                📥 Directly Depends On
+                                Depends On
                                 <span class="connection-count">${directDeps.length}</span>
                             </div>
-                            ${directDeps.length > 0 ? `
-                                <div class="connection-list">
-                                    ${directDeps.map(n => `
-                                        <div class="connection-item">
-                                            <span class="goto-link" onclick="goToItem('${n.id}'); event.stopPropagation();" title="Jump to this item">→</span>
-                                            <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${n.label}">${n.label}</span>
-                                            <span class="connection-item-type">${getTypeLabel(n.type)}</span>
-                                            <div class="connection-actions">
-                                                ${n.url ? `<button class="action-btn" onclick="openPortal('${n.url}', event);" title="Open in ArcGIS Portal">🌐</button>` : ''}
-                                                <button class="action-btn" onclick="copyItemId('${n.id}', event);" title="Copy ID">📋</button>
-                                            </div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            ` : '<div class="no-connections">No direct dependencies</div>'}
-                            
+                            ${directDeps.length > 0 
+                                ? `<div class="dep-list">${directDeps.map(n => renderDepItem(n, false)).join('')}</div>` 
+                                : '<div class="no-connections">No direct dependencies</div>'
+                            }
                             ${indirectDepsOnly.length > 0 ? `
                                 <div class="indirect-section">
                                     <button class="indirect-toggle-btn" id="indirect-btn-deps-${node.id}" onclick="toggleIndirectList('${node.id}', 'deps'); event.stopPropagation();">
                                         ▶ Show ${indirectDepsOnly.length} indirect dependencies
                                     </button>
                                     <div class="indirect-list" id="indirect-deps-${node.id}">
-                                        ${indirectDepsOnly.map(n => `
-                                            <div class="indirect-item" onclick="goToItem('${n.id}'); event.stopPropagation();">
-                                                <span class="indirect-item-name" title="${n.label}">${n.label}</span>
-                                                <div class="connection-actions">
-                                                    ${n.url ? `<button class="action-btn" onclick="openPortal('${n.url}', event);" title="Open in ArcGIS Portal">🌐</button>` : ''}
-                                                    <button class="action-btn" onclick="copyItemId('${n.id}', event);" title="Copy ID">📋</button>
-                                                </div>
-                                                <span class="indirect-item-type">${getTypeLabel(n.type)}</span>
-                                            </div>
-                                        `).join('')}
+                                        <div class="dep-list">
+                                            ${indirectDepsOnly.map(n => renderDepItem(n, false)).join('')}
+                                        </div>
                                     </div>
                                 </div>
                             ` : ''}
@@ -1111,41 +966,22 @@ function renderTable() {
                         
                         <div class="connection-section">
                             <div class="connection-title">
-                                📤 Directly Used By
+                                Used By
                                 <span class="connection-count">${directDependents.length}</span>
                             </div>
-                            ${directDependents.length > 0 ? `
-                                <div class="connection-list">
-                                    ${directDependents.map(n => `
-                                        <div class="connection-item">
-                                            <span class="goto-link" onclick="goToItem('${n.id}'); event.stopPropagation();" title="Jump to this item">→</span>
-                                            <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${n.label}">${n.label}</span>
-                                            <span class="connection-item-type">${getTypeLabel(n.type)}</span>
-                                            <div class="connection-actions">
-                                                ${n.url ? `<button class="action-btn" onclick="openPortal('${n.url}', event);" title="Open in ArcGIS Portal">🌐</button>` : ''}
-                                                <button class="action-btn" onclick="copyItemId('${n.id}', event);" title="Copy ID">📋</button>
-                                            </div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            ` : '<div class="no-connections">No direct dependents</div>'}
-                            
+                            ${directDependents.length > 0 
+                                ? `<div class="dep-list">${directDependents.map(n => renderDepItem(n, true)).join('')}</div>` 
+                                : '<div class="no-connections">No direct dependents</div>'
+                            }
                             ${indirectDependentsOnly.length > 0 ? `
                                 <div class="indirect-section">
                                     <button class="indirect-toggle-btn" id="indirect-btn-dependents-${node.id}" onclick="toggleIndirectList('${node.id}', 'dependents'); event.stopPropagation();">
                                         ▶ Show ${indirectDependentsOnly.length} indirect dependents
                                     </button>
                                     <div class="indirect-list" id="indirect-dependents-${node.id}">
-                                        ${indirectDependentsOnly.map(n => `
-                                            <div class="indirect-item" onclick="goToItem('${n.id}'); event.stopPropagation();">
-                                                <span class="indirect-item-name" title="${n.label}">${n.label}</span>
-                                                <div class="connection-actions">
-                                                    ${n.url ? `<button class="action-btn" onclick="openPortal('${n.url}', event);" title="Open in ArcGIS Portal">🌐</button>` : ''}
-                                                    <button class="action-btn" onclick="copyItemId('${n.id}', event);" title="Copy ID">📋</button>
-                                                </div>
-                                                <span class="indirect-item-type">${getTypeLabel(n.type)}</span>
-                                            </div>
-                                        `).join('')}
+                                        <div class="dep-list">
+                                            ${indirectDependentsOnly.map(n => renderDepItem(n, true)).join('')}
+                                        </div>
                                     </div>
                                 </div>
                             ` : ''}
@@ -1163,11 +999,7 @@ function renderTable() {
 function populateOwnerFilter() {
     const owners = [...new Set(allNodes.map(n => n.owner).filter(o => o))].sort();
     const select = document.getElementById('owner-filter');
-    
-    while (select.options.length > 1) {
-        select.remove(1);
-    }
-    
+    while (select.options.length > 1) select.remove(1);
     owners.forEach(owner => {
         const option = document.createElement('option');
         option.value = owner;
@@ -1178,24 +1010,19 @@ function populateOwnerFilter() {
 
 function initializeData(data) {
     showLoadingOverlay(true);
-    
     try {
         allNodes = data.nodes || [];
         allLinks = data.edges || [];
-        
         if (allNodes.length === 0) {
             alert('No nodes found in data');
             showLoadingOverlay(false);
             return;
         }
-        
         console.log('Loaded', allNodes.length, 'nodes and', allLinks.length, 'links');
-        
         populateOwnerFilter();
         applyFilters();
         updateSortIndicators();
         showLoadingOverlay(false);
-        
     } catch (error) {
         console.error('Error loading data:', error);
         alert('Error loading data: ' + error.message);
@@ -1203,17 +1030,14 @@ function initializeData(data) {
     }
 }
 
-// Event listeners
 document.getElementById('type-filter').addEventListener('change', applyFilters);
 document.getElementById('owner-filter').addEventListener('change', applyFilters);
 document.getElementById('status-filter').addEventListener('change', applyFilters);
 document.getElementById('search-filter').addEventListener('input', applyFilters);
 
-// File input handler
 document.getElementById('jsonFileInput').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
-    
     const reader = new FileReader();
     reader.onload = function(event) {
         try {
@@ -1230,7 +1054,6 @@ document.getElementById('jsonFileInput').addEventListener('change', function(e) 
         showLoadingOverlay(false);
     };
     reader.readAsText(file);
-    
     this.value = '';
 });
 </script>
