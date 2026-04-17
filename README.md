@@ -1,2 +1,2 @@
 # Frontenac
-Unofficial Repository for the custom tools made for Frontenac County
+The Repository of custom tools made at Frontenac County
