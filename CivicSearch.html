@@ -4,226 +4,558 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Frontenac Road and Civic Finder</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  body {
-    font-family: 'Inter', sans-serif;
-    background: linear-gradient(to right, #e0eafc, #cfdef3);
-    color: #333;
-    min-height: 100vh;
-    /* Add padding to body to prevent panel from overlapping scrollbar if it's at very edge */
-    padding: 20px; 
-  }
-  .container {
-    max-width: 700px;
-    margin: 0 auto; /* Centered, panel will be outside this */
-    padding: 30px 20px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-    position: relative; /* For context if needed, though panel is fixed */
-  }
-  h1 {
-    font-weight: 700;
-    margin-bottom: 30px;
-    text-align: center;
-    color: #184d47;
-    position: relative;
-    padding-bottom: 10px;
-  }
-  h1::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    bottom: 0;
-    transform: translateX(-50%);
-    height: 3px;
-    width: 60px;
-    background-color: #184d47;
-    border-radius: 5px;
-  }
-  .form-control {
-    border-radius: 0.5rem;
-    border: 1px solid #ced4da;
-    padding: 0.75rem 1rem;
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.075);
-  }
-  .form-control:focus {
-    border-color: #184d47;
-    box-shadow: 0 0 0 0.25rem rgba(24, 77, 71, 0.25);
-  }
-  .btn-primary {
-    background-color: #184d47;
-    border-color: #184d47;
-    padding: 0.75rem 1.5rem;
-    font-size: 1.1rem;
-    border-radius: 0.5rem;
-    transition: all 0.3s ease;
-  }
-  .btn-primary:hover {
-    background-color: #113833;
-    border-color: #113833;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(24, 77, 71, 0.3);
+  :root {
+    --primary: #064e3b;
+    --primary-hover: #065f46;
+    --accent: #10b981;
+    --bg-body: #f8fafc;
+    --bg-card: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   }
 
-  /* Results Section Styling */
-  #results .card {
-    margin-bottom: 1.5rem;
-    background-color: #ffffff;
-    border: none;
-    border-left: 6px solid #184d47;
-    border-radius: 0.75rem;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-    transition: transform 0.2s ease-in-out;
+  * {
+    box-sizing: border-box;
   }
-  #results .card:hover {
-    transform: translateY(-5px);
+
+  [hidden] {
+    display: none !important;
   }
-  #results .card .card-body { padding: 1.5rem; }
-  #results .card-title {
-    color: #184d47;
-    font-weight: 700;
-    font-size: 1.4rem;
+
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: var(--bg-body);
+    color: var(--text-main);
+    min-height: 100vh;
+    margin: 0;
+    padding: 1.5rem;
+    line-height: 1.55;
+  }
+
+  .page {
+    max-width: 1320px;
+    margin: 0 auto;
+  }
+
+  .page-header {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+    padding: 1.75rem;
     margin-bottom: 1rem;
   }
-  #results .card-text strong {
-    color: #184d47;
-    font-weight: 600;
-  }
-  #results .badge {
-    padding: 0.5em 0.8em;
-    border-radius: 0.35rem;
-    font-size: 0.85em;
-    font-weight: 600;
-  }
-  .badge.bg-success { background-color: #28a745 !important; }
-  .badge.bg-warning { background-color: #ffc107 !important; color: #333 !important; }
-  .badge.bg-info { background-color: #17a2b8 !important; color: #fff !important; }
-  .badge.bg-secondary { background-color: #6c757d !important; }
 
-  /* Map and Footer */
-  #map {
-    height: 400px;
+  h1 {
+    font-weight: 700;
+    font-size: 1.6rem;
+    margin: 0 0 1.25rem 0;
+    color: var(--primary);
+    letter-spacing: -0.025em;
+  }
+
+  .search-wrapper {
+    display: block;
+  }
+
+  .search-field {
+    position: relative;
     width: 100%;
-    margin-top: 30px;
+  }
+
+  .search-input {
+    width: 100%;
     border-radius: 12px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    display: none;
-    border: 1px solid #dee2e6;
-  }
-  .footer {
-    text-align: center;
-    font-size: 0.85rem;
-    color: #777;
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid #eee;
+    border: 1.5px solid var(--border);
+    padding: 0.95rem 1.2rem;
+    font-size: 1rem;
+    font-family: inherit;
+    color: var(--text-main);
+    transition: all 0.2s ease;
+    outline: none;
+    background: white;
   }
 
-  .toggle-arrow {
-    cursor: pointer;
-    font-size: 1.1em;
-    color: #184d47;
-    margin-right: 8px;
-    user-select: none;
-  }
-  .toggle-arrow.active {
-    color: #FF6347;
-    font-weight: bold;
+  .search-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
   }
 
-  #external-address-panel {
-    position: fixed;
-    /* top, left, right will be set by JS */
-    width: 300px; 
-    max-height: 75vh;
-    background-color: #fff;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-    z-index: 1050;
-    display: none; 
-    flex-direction: column;
-  }
-  #external-panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 15px;
-    background-color: #f7f7f7;
-    border-bottom: 1px solid #ddd;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-  }
-  #external-panel-title {
+  .search-btn {
+    width: 100%;
+    margin-top: 0.75rem;
+    background-color: var(--primary);
+    border: none;
+    color: white;
+    padding: 0.95rem 1rem;
     font-size: 1rem;
     font-weight: 600;
-    margin-bottom: 0;
-    color: #184d47;
-  }
-  #close-external-panel {
-    background: none;
-    border: none;
-    font-size: 1.6rem;
-    font-weight: normal;
-    color: #888;
+    border-radius: 12px;
     cursor: pointer;
-    padding: 0;
-    line-height: 1;
+    transition: all 0.2s ease;
+    font-family: inherit;
   }
-  #close-external-panel:hover {
-    color: #333;
+
+  .search-btn:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
   }
-  #external-panel-content {
-    padding: 15px;
+
+  @media (min-width: 640px) {
+    .search-wrapper {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+
+    .search-field {
+      flex: 1;
+    }
+
+    .search-btn {
+      width: auto;
+      margin-top: 0;
+      padding: 0.95rem 1.75rem;
+    }
+  }
+
+  .autocomplete-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    max-height: 320px;
     overflow-y: auto;
-    flex-grow: 1;
-    font-size: 0.88em;
+    z-index: 1200;
+    display: none;
   }
-  #external-panel-content p {
-      margin-bottom: 0.3rem;
+
+  .autocomplete-dropdown.active {
+    display: block;
   }
-  .custom-civic-marker { /* For temporary map markers */
-    font-size: 1.5rem; /* Adjust emoji size */
-    color: #E53935; /* A distinct color, e.g., red */
-    text-shadow: 1px 1px 2px white; /* improve visibility */
+
+  .autocomplete-group {
+    padding: 0.7rem 1.25rem 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    background: white;
+    position: sticky;
+    top: 0;
+  }
+
+  .autocomplete-item {
+    padding: 0.8rem 1.25rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s ease;
+    font-size: 0.95rem;
+  }
+
+  .autocomplete-item:last-child {
+    border-bottom: none;
+  }
+
+  .autocomplete-item:hover,
+  .autocomplete-item.active {
+    background-color: #f0fdf4;
+  }
+
+  .autocomplete-type {
+    display: inline-block;
+    min-width: 68px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-right: 0.5rem;
+    vertical-align: middle;
+  }
+
+  .autocomplete-empty {
+    padding: 0.9rem 1.25rem;
+    color: var(--text-muted);
+  }
+
+  mark {
+    background: #d1fae5;
+    color: inherit;
+    padding: 0 2px;
+    border-radius: 3px;
+  }
+
+  .app-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    align-items: start;
+  }
+
+  @media (max-width: 959px) {
+    .app-layout {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .map-panel {
+      order: -1;
+      height: 280px;
+      position: sticky;
+      top: 0.75rem;
+      z-index: 900;
+      box-shadow: var(--shadow-lg);
+    }
+  }
+
+  @media (min-width: 960px) {
+    .app-layout {
+      grid-template-columns: 430px minmax(0, 1fr);
+      height: calc(100vh - 3rem);
+      align-items: stretch;
+    }
+
+    .left-panel {
+      height: 100%;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .map-panel {
+      position: sticky;
+      top: 0;
+      height: 100%;
+      min-height: 0;
+    }
+  }
+
+  .left-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
+  }
+
+  .panel-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .map-panel {
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: white;
+  }
+
+  #map {
+    height: 100%;
+    width: 100%;
+    display: block;
+  }
+
+  .message {
+    font-weight: 500;
+    margin: 0;
+  }
+
+  .message.muted {
+    color: var(--text-muted);
+  }
+
+  .message.success {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .message.warning {
+    color: #f59e0b;
+  }
+
+  .message.error {
+    color: #ef4444;
+  }
+
+  .result-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .summary-title {
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 1.05rem;
+  }
+
+  .summary-subtitle {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    margin-top: 0.2rem;
+  }
+
+  .segment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    overflow: auto;
+    min-height: 120px;
+    padding-bottom: 0.25rem;
+  }
+
+  .segment-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.8rem;
+    cursor: pointer;
+    background: white;
+    transition: all 0.15s ease;
+  }
+
+  .segment-row:hover {
+    border-color: var(--accent);
+  }
+
+  .segment-row.active {
+    border-color: var(--accent);
+    background: #f0fdf4;
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+
+  .segment-row-main {
+    min-width: 0;
+  }
+
+  .segment-row-title {
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .segment-row-ranges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .range-chip {
+    display: inline-block;
+    background: #f1f5f9;
+    border-radius: 999px;
+    padding: 0.18rem 0.55rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+
+  .segment-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+
+  .mini-btn {
+    border: 1px solid var(--border);
+    background: white;
+    border-radius: 8px;
+    padding: 0.45rem 0.65rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-family: inherit;
+    color: var(--text-main);
+    transition: all 0.15s ease;
+  }
+
+  .mini-btn:hover {
+    border-color: var(--accent);
+    color: var(--primary);
+  }
+
+  .mini-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+
+  .detail-panel {
+    background: #fcfcfc;
+  }
+
+  .detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .detail-title {
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 1.05rem;
+  }
+
+  .detail-subtitle {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    margin-top: 0.15rem;
+  }
+
+  .detail-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+    margin-bottom: 0.9rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+
+  .detail-meta strong {
+    color: var(--text-main);
+    font-weight: 600;
+  }
+
+  .detail-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--border);
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    color: var(--text-main);
+    transition: all 0.15s ease;
+  }
+
+  .tab:hover {
+    border-color: var(--accent);
+    color: var(--primary);
+  }
+
+  .tab.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+
+  .detail-address-list {
+    max-height: 260px;
+    overflow: auto;
+    border-top: 1px solid var(--border);
+    padding-top: 0.75rem;
+  }
+
+  .detail-count {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    margin-bottom: 0.55rem;
+  }
+
+  .address-item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.9rem;
+  }
+
+  .address-item:last-child {
+    border-bottom: none;
+  }
+
+  .footer {
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-weight: 500;
+  }
+
+  .custom-civic-marker {
+    background-color: var(--primary);
+    color: white;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 12px;
+    border: 2px solid white;
+    box-shadow: var(--shadow-md);
+  }
+
+  .leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.9rem;
   }
 </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Frontenac Road and Civic Finder</h1>
-    <div class="input-group mb-3">
-        <input
+  <div class="page">
+    <header class="page-header">
+      <h1>Frontenac Road and Civic Finder</h1>
+
+      <div class="search-wrapper">
+        <div class="search-field">
+          <input
             type="text"
             id="search"
-            class="form-control"
-            placeholder="Enter road name or full address (e.g., 123 Main St, County Rd 1)"
-            oninput="autoSuggest()"
-            list="suggestions"
+            class="search-input"
+            placeholder="Enter road name or full address"
             autocomplete="off"
-        />
-        <button class="btn btn-primary" type="button" onclick="performSearch()">
-            Search
-        </button>
+            spellcheck="false"
+          />
+          <div id="autocomplete-dropdown" class="autocomplete-dropdown" role="listbox"></div>
+        </div>
+        <button class="search-btn" type="button" onclick="performSearch()">Search</button>
+      </div>
+    </header>
+
+    <div class="app-layout">
+      <div class="left-panel">
+        <div id="status"></div>
+        <div id="result-summary" class="panel-card result-summary" hidden></div>
+        <div id="detail-panel" class="panel-card detail-panel" hidden></div>
+        <div id="segment-list" class="segment-list" hidden></div>
+      </div>
+
+      <div class="map-panel">
+        <div id="map"></div>
+      </div>
     </div>
-    <datalist id="suggestions"></datalist>
 
-    <div id="results" class="mt-4"></div>
-    <div id="map"></div>
-
-    <div class="footer">Made with ❤️ in Frontenac</div>
-  </div>
-
-  <div id="external-address-panel">
-    <div id="external-panel-header">
-        <h5 id="external-panel-title">Associated Addresses</h5>
-        <button id="close-external-panel" type="button" title="Close">&times;</button>
-    </div>
-    <div id="external-panel-content"></div>
+    <div class="footer">Made with &hearts; in Frontenac</div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -235,510 +567,1122 @@
     let roads = [];
     let civicAddresses = [];
     let map;
-    let currentlyActiveArrow = null;
-    let tempCivicMarkersGroup = null; // For temporary markers on map
+    let roadLayerGroup;
+    let civicLayerGroup;
 
-    const roadColors = [
-      '#FF6347', '#6A5ACD', '#3CB371', '#FFD700', '#FF8C00',
-      '#1E90FF', '#EE82EE', '#00CED1', '#FF4500', '#20B2AA',
-      '#8A2BE2', '#D2691E', '#DC143C', '#008B8B'
-    ];
+    let currentSuggestions = [];
+    let activeSuggestionIndex = -1;
 
-    async function fetchAllFeatures(url, max = 1000) { /* ... (same) ... */ 
-      let allFeatures = [], offset = 0, done = false;
-      while (!done) {
-        const response = await fetch(`${url}&resultOffset=${offset}&resultRecordCount=${max}`);
-        const data = await response.json();
-        allFeatures = allFeatures.concat(data.features);
-        if (!data.exceededTransferLimit) done = true;
-        else offset += max;
-      }
-      return allFeatures;
+    let currentMatchingSegments = [];
+    let currentAddress = null;
+    let selectedSegment = null;
+    let selectedSide = null;
+    let segmentLayers = {};
+
+    const searchInput = document.getElementById("search");
+    const dropdown = document.getElementById("autocomplete-dropdown");
+    const statusEl = document.getElementById("status");
+    const summaryEl = document.getElementById("result-summary");
+    const detailEl = document.getElementById("detail-panel");
+    const segmentListEl = document.getElementById("segment-list");
+
+    function debounce(func, wait) {
+      let timeout;
+      return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+      };
     }
-    async function loadData() { /* ... (same) ... */ 
-      document.getElementById('results').innerHTML = '<p class="text-muted text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div> Loading data, please wait...</p>';
-      try {
-        roads = await fetchAllFeatures(
-          "https://services2.arcgis.com/vJlmDE1PmdTcJF0N/arcgis/rest/services/Frontenac_Road_Nework_View/FeatureServer/0/query?where=1%3D1&outFields=*&f=json"
-        );
-        civicAddresses = await fetchAllFeatures(
-          "https://services2.arcgis.com/vJlmDE1PmdTcJF0N/arcgis/rest/services/Civic_Address_Points_View_2/FeatureServer/0/query?where=1%3D1&outFields=*&f=json"
-        );
-        document.getElementById('results').innerHTML = '<p class="text-success text-center">Data loaded. You may now search!</p>';
-      } catch (error) {
-        console.error("Error loading data:", error);
-        document.getElementById('results').innerHTML = '<p class="text-danger text-center">Failed to load data. Please try again later.</p>';
-      }
+
+    function normalize(value) {
+      return String(value || "")
+        .toUpperCase()
+        .replace(/\s+/g, " ")
+        .trim();
     }
-    function autoSuggest() { /* ... (same) ... */ 
-      const input = document.getElementById('search').value.toUpperCase();
-      const datalist = document.getElementById('suggestions');
-      datalist.innerHTML = '';
-      const uniqueSuggestions = new Set();
 
-      civicAddresses.forEach(addr => {
-        const a = addr.attributes;
-        const fullAddress = `${a.StreetNumber} ${a.StreetName || ''}`.toUpperCase().trim();
-        if (fullAddress.includes(input) && fullAddress !== '') uniqueSuggestions.add(fullAddress);
-      });
-
-      roads.forEach(road => {
-        const a = road.attributes;
-        const fullRoadName = (a.NAME_FULL || '').toUpperCase().trim();
-        if (fullRoadName.includes(input) && fullRoadName !== '') uniqueSuggestions.add(fullRoadName);
-      });
-
-      Array.from(uniqueSuggestions).slice(0, 10).forEach(suggestion => {
-        const option = document.createElement('option');
-        option.value = suggestion;
-        datalist.appendChild(option);
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, function (char) {
+        return {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        }[char];
       });
     }
-    function calculateParity(num) { /* ... (same) ... */ 
-      if (num === null || num === undefined || isNaN(parseInt(num))) return 'N/A';
-      return parseInt(num) % 2 === 0 ? 'Even' : 'Odd';
+
+    function escapeRegExp(value) {
+      return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     }
-    function reprojectCoord(x, y) { /* ... (same) ... */ 
-      try {
-        return proj4(NAD83_18N, WGS84, [x, y]);
-      } catch (e) {
-        console.error("Proj4js re-projection error:", e, "Input:", x, y);
-        return [NaN, NaN];
-      }
-    }
-    function getAddressesForSegmentSide(segmentAttributes, streetName, side) { /* ... (same) ... */ 
-        const relevantAddresses = [];
-        if (!segmentAttributes || !streetName) return relevantAddresses;
 
-        const segmentStreetNameUpper = streetName.toUpperCase();
-        let fromAddr, toAddr, segmentRangeStartNum;
-
-        if (side === 'L') {
-            fromAddr = segmentAttributes.F_ADDR_L_911;
-            toAddr = segmentAttributes.T_ADDR_L_911;
-            segmentRangeStartNum = segmentAttributes.F_ADDR_L_911;
-        } else { // side === 'R'
-            fromAddr = segmentAttributes.F_ADDR_R_911;
-            toAddr = segmentAttributes.T_ADDR_R_911;
-            segmentRangeStartNum = segmentAttributes.F_ADDR_R_911;
-        }
-
-        if (fromAddr == null || toAddr == null || segmentRangeStartNum == null) {
-            return []; 
-        }
-        
-        const expectedParity = calculateParity(segmentRangeStartNum);
-        if (expectedParity === 'N/A') {
-            return []; 
-        }
-
-        const minAddr = Math.min(parseInt(fromAddr), parseInt(toAddr));
-        const maxAddr = Math.max(parseInt(fromAddr), parseInt(toAddr));
-
-        civicAddresses.forEach(addr => {
-            const civicAttr = addr.attributes;
-            if (civicAttr.StreetName?.toUpperCase() === segmentStreetNameUpper) {
-                const civicNum = parseInt(civicAttr.StreetNumber);
-                if (!isNaN(civicNum) && civicNum >= minAddr && civicNum <= maxAddr) {
-                    if (calculateParity(civicNum) === expectedParity) {
-                        relevantAddresses.push(addr);
-                    }
-                }
-            }
+    function highlightMatch(text, query) {
+      const safeText = escapeHtml(text);
+      const tokens = query
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map(function (token) {
+          return escapeRegExp(escapeHtml(token));
         });
-        relevantAddresses.sort((a, b) => (a.attributes.StreetNumber || 0) - (b.attributes.StreetNumber || 0));
-        return relevantAddresses;
-    }
 
-    function clearTemporaryMapMarkers() {
-        if (tempCivicMarkersGroup) {
-            tempCivicMarkersGroup.clearLayers();
-        }
-    }
-
-    function toggleAddressList(segmentObjectId, side, clickedArrowElement) {
-        const externalPanel = document.getElementById('external-address-panel');
-        const panelTitle = document.getElementById('external-panel-title');
-        const panelContent = document.getElementById('external-panel-content');
-        const panelMarginFromEdge = 20; // px, gap from viewport edge
-        const panelWidth = externalPanel.offsetWidth || 300; // Use actual or default width
-
-        clearTemporaryMapMarkers();
-
-        if (currentlyActiveArrow === clickedArrowElement && externalPanel.style.display === 'flex') {
-            externalPanel.style.display = 'none';
-            panelContent.innerHTML = '';
-            clickedArrowElement.classList.remove('active');
-            clickedArrowElement.innerHTML = '▶';
-            currentlyActiveArrow = null;
-            return;
-        }
-
-        if (currentlyActiveArrow && currentlyActiveArrow !== clickedArrowElement) {
-            currentlyActiveArrow.classList.remove('active');
-            currentlyActiveArrow.innerHTML = '▶';
-        }
-
-        const segment = roads.find(r => r.attributes.OBJECTID == segmentObjectId);
-        if (!segment) {
-            console.error("Segment not found for OBJECTID:", segmentObjectId);
-            panelTitle.textContent = "Error";
-            panelContent.innerHTML = '<p class="text-danger">Error: Segment data not found.</p>';
-            // Position and show even for error
-            const arrowRect = clickedArrowElement.getBoundingClientRect();
-            externalPanel.style.top = Math.max(panelMarginFromEdge, arrowRect.top) + 'px';
-            if (side === 'L') {
-                externalPanel.style.left = panelMarginFromEdge + 'px';
-                externalPanel.style.right = 'auto';
-            } else {
-                externalPanel.style.right = panelMarginFromEdge + 'px';
-                externalPanel.style.left = 'auto';
-            }
-            externalPanel.style.display = 'flex';
-            clickedArrowElement.classList.add('active');
-            clickedArrowElement.innerHTML = '▼';
-            currentlyActiveArrow = clickedArrowElement;
-            return;
-        }
-
-        const addresses = getAddressesForSegmentSide(segment.attributes, segment.attributes.NAME_FULL, side);
-        const sideText = side === 'L' ? 'Left Side' : 'Right Side';
-        const roadName = segment.attributes.NAME_FULL || 'Unknown Road';
-        panelTitle.textContent = `${roadName} - ${sideText}`;
-
-        if (addresses.length > 0) {
-            panelContent.innerHTML = addresses.map(addr =>
-                `<p><small>${addr.attributes.StreetNumber} ${addr.attributes.StreetName || ''} (${addr.attributes.Location || 'N/A'})</small></p>`
-            ).join('');
-
-            if (tempCivicMarkersGroup && map) { // Add markers to map
-                addresses.forEach(addr => {
-                    if (addr.geometry && addr.geometry.x != null && addr.geometry.y != null) {
-                        const [lon, lat] = reprojectCoord(addr.geometry.x, addr.geometry.y);
-                        if (!isNaN(lat) && !isNaN(lon)) {
-                            L.marker([lat, lon], {
-                                icon: L.divIcon({
-                                    className: 'custom-civic-marker',
-                                    html: '📍', // Simple pin emoji
-                                    iconSize: [24, 24],
-                                    iconAnchor: [12, 24] // Anchor at bottom center of pin
-                                })
-                            })
-                            .bindPopup(`Civic: ${addr.attributes.StreetNumber} ${addr.attributes.StreetName || ''}`)
-                            .addTo(tempCivicMarkersGroup);
-                        }
-                    }
-                });
-            }
-        } else {
-            panelContent.innerHTML = '<p class="text-muted"><small>No matching civic addresses found.</small></p>';
-        }
-        
-        // Position and display panel
-        const arrowRect = clickedArrowElement.getBoundingClientRect();
-        let panelTop = Math.max(panelMarginFromEdge, arrowRect.top);
-        // Adjust if panel would go off bottom of screen
-        if (panelTop + externalPanel.offsetHeight > window.innerHeight - panelMarginFromEdge) {
-            panelTop = Math.max(panelMarginFromEdge, window.innerHeight - externalPanel.offsetHeight - panelMarginFromEdge);
-        }
-        externalPanel.style.top = panelTop + 'px';
-
-        if (side === 'L') {
-            externalPanel.style.left = panelMarginFromEdge + 'px';
-            externalPanel.style.right = 'auto';
-        } else { // 'R'
-            externalPanel.style.right = panelMarginFromEdge + 'px';
-            externalPanel.style.left = 'auto';
-        }
-
-        externalPanel.style.display = 'flex';
-        clickedArrowElement.classList.add('active');
-        clickedArrowElement.innerHTML = '▼';
-        currentlyActiveArrow = clickedArrowElement;
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const closeButton = document.getElementById('close-external-panel');
-        const externalPanel = document.getElementById('external-address-panel');
-        if (closeButton && externalPanel) {
-            closeButton.onclick = () => {
-                externalPanel.style.display = 'none';
-                document.getElementById('external-panel-content').innerHTML = '';
-                if (currentlyActiveArrow) {
-                    currentlyActiveArrow.classList.remove('active');
-                    currentlyActiveArrow.innerHTML = '▶';
-                    currentlyActiveArrow = null;
-                }
-                clearTemporaryMapMarkers();
-            };
-        }
-    });
-
-    function performSearch() {
-      // ... (existing query, resultsDiv, mapDiv setup) ...
-      const query = document.getElementById('search').value.trim();
-      const resultsDiv = document.getElementById('results');
-      const mapDiv = document.getElementById('map');
-      resultsDiv.innerHTML = '';
-      mapDiv.style.display = 'none';
-
-
-      const externalPanel = document.getElementById('external-address-panel');
-      if (externalPanel) externalPanel.style.display = 'none';
-      if (currentlyActiveArrow) {
-          currentlyActiveArrow.classList.remove('active');
-          currentlyActiveArrow.innerHTML = '▶';
-          currentlyActiveArrow = null;
+      if (!tokens.length) {
+        return safeText;
       }
-      clearTemporaryMapMarkers(); // Clear markers on new search
 
-      if (!query) { /* ... (same) ... */ 
-        resultsDiv.innerHTML = '<p class="text-danger text-center">Please enter a road name or full address.</p>';
+      const regex = new RegExp("(" + tokens.join("|") + ")", "gi");
+      return safeText.replace(regex, "<mark>$1</mark>");
+    }
+
+    function closeDropdown() {
+      dropdown.classList.remove("active");
+      activeSuggestionIndex = -1;
+    }
+
+    function getSuggestions(rawQuery) {
+      const query = normalize(rawQuery);
+
+      if (query.length < 2) {
+        return [];
+      }
+
+      const tokens = query.split(" ").filter(Boolean);
+      const items = [];
+      const seen = new Set();
+
+      roads.forEach(function (road) {
+        const attributes = road?.attributes;
+        if (!attributes) return;
+
+        const label = String(attributes.NAME_FULL || "").trim();
+        const value = normalize(label);
+
+        if (!value) return;
+
+        const startsWith = value.startsWith(query);
+        const includesExact = value.includes(query);
+        const includesTokens = tokens.every(function (token) {
+          return value.includes(token);
+        });
+
+        if (!includesExact && !includesTokens) return;
+
+        const key = "road:" + value;
+        if (seen.has(key)) return;
+
+        seen.add(key);
+
+        items.push({
+          type: "road",
+          label: label,
+          value: value,
+          score: startsWith ? 0 : includesExact ? 1 : 2
+        });
+      });
+
+      civicAddresses.forEach(function (address) {
+        const attributes = address?.attributes;
+        if (!attributes) return;
+        if (attributes.StreetNumber == null) return;
+
+        const label = (attributes.StreetNumber + " " + (attributes.StreetName || "")).trim();
+        const value = normalize(label);
+
+        if (!value) return;
+
+        const startsWith = value.startsWith(query);
+        const includesExact = value.includes(query);
+        const includesTokens = tokens.every(function (token) {
+          return value.includes(token);
+        });
+
+        if (!includesExact && !includesTokens) return;
+
+        const key = "address:" + value;
+        if (seen.has(key)) return;
+
+        seen.add(key);
+
+        items.push({
+          type: "address",
+          label: label,
+          value: value,
+          score: startsWith ? 10 : includesExact ? 11 : 12
+        });
+      });
+
+      items.sort(function (a, b) {
+        return a.score - b.score || a.label.localeCompare(b.label);
+      });
+
+      return items.slice(0, 12);
+    }
+
+    function renderDropdown(items, rawQuery) {
+      dropdown.innerHTML = "";
+      currentSuggestions = items;
+      activeSuggestionIndex = -1;
+
+      if (!items.length) {
+        dropdown.innerHTML = '<div class="autocomplete-empty">No matches found</div>';
+        dropdown.classList.add("active");
         return;
       }
 
-      const isAddress = /^\d+\s+.+/.test(query);
-      let streetNumber = null;
-      let streetName = query.toUpperCase();
+      let lastType = "";
 
-      if (isAddress) {
-        const parts = query.match(/^(\d+)\s+(.*)$/);
-        streetNumber = parseInt(parts[1]);
-        streetName = parts[2].toUpperCase();
-
-        const address = civicAddresses.find(addr => {
-          const a = addr.attributes;
-          return a.StreetNumber === streetNumber && a.StreetName?.toUpperCase() === streetName;
-        });
-
-        if (!address) {
-          resultsDiv.innerHTML = '<p class="text-warning text-center">No matching civic address found. Try searching by road name only.</p>';
-          return;
+      items.forEach(function (item, index) {
+        if (item.type !== lastType) {
+          const group = document.createElement("div");
+          group.className = "autocomplete-group";
+          group.textContent = item.type === "road" ? "Roads" : "Addresses";
+          dropdown.appendChild(group);
+          lastType = item.type;
         }
 
-        const matchingRoads = roads.filter(road => road.attributes.NAME_FULL?.toUpperCase() === streetName);
+        const row = document.createElement("div");
+        row.className = "autocomplete-item";
+        row.id = "suggestion-" + index;
+        row.setAttribute("role", "option");
 
-        const matchedSegments = matchingRoads.filter(r => {
-          const a = r.attributes;
-          const inLeftRange =
-            a.F_ADDR_L_911 != null && a.T_ADDR_L_911 != null &&
-            streetNumber >= Math.min(a.F_ADDR_L_911, a.T_ADDR_L_911) && streetNumber <= Math.max(a.F_ADDR_L_911, a.T_ADDR_L_911) &&
-            calculateParity(streetNumber) === calculateParity(a.F_ADDR_L_911);
-          const inRightRange =
-            a.F_ADDR_R_911 != null && a.T_ADDR_R_911 != null &&
-            streetNumber >= Math.min(a.F_ADDR_R_911, a.T_ADDR_R_911) && streetNumber <= Math.max(a.F_ADDR_R_911, a.T_ADDR_R_911) &&
-            calculateParity(streetNumber) === calculateParity(a.F_ADDR_R_911);
-          return inLeftRange || inRightRange;
+        row.innerHTML =
+          '<span class="autocomplete-type">' + (item.type === "road" ? "Road" : "Address") + "</span>" +
+          "<span>" + highlightMatch(item.label, rawQuery) + "</span>";
+
+        row.addEventListener("mousedown", function (event) {
+          event.preventDefault();
+          selectSuggestion(index);
         });
 
-        if (!matchedSegments.length) {
-          resultsDiv.innerHTML = `<p class="text-info text-center">Address point found, but no matching road segment for ${streetNumber} ${streetName} with correct address range and parity.</p>`;
-          showMap(address, []);
-          return;
+        dropdown.appendChild(row);
+      });
+
+      dropdown.classList.add("active");
+    }
+
+    function updateActiveSuggestion(direction) {
+      const items = dropdown.querySelectorAll(".autocomplete-item");
+
+      if (!items.length) return;
+
+      activeSuggestionIndex = (activeSuggestionIndex + direction + items.length) % items.length;
+
+      items.forEach(function (item) {
+        item.classList.remove("active");
+      });
+
+      const activeItem = items[activeSuggestionIndex];
+      activeItem.classList.add("active");
+      activeItem.scrollIntoView({ block: "nearest" });
+    }
+
+    function selectSuggestion(index) {
+      const item = currentSuggestions[index];
+
+      if (!item) return;
+
+      searchInput.value = item.label;
+      closeDropdown();
+      performSearch();
+    }
+
+    const debouncedAutoSuggest = debounce(function () {
+      const rawQuery = searchInput.value.trim();
+
+      if (rawQuery.length < 2) {
+        closeDropdown();
+        return;
+      }
+
+      const items = getSuggestions(rawQuery);
+      renderDropdown(items, rawQuery);
+    }, 200);
+
+    searchInput.addEventListener("input", debouncedAutoSuggest);
+
+    searchInput.addEventListener("focus", function () {
+      if (searchInput.value.trim().length >= 2) {
+        debouncedAutoSuggest();
+      }
+    });
+
+    searchInput.addEventListener("keydown", function (event) {
+      const isOpen = dropdown.classList.contains("active");
+
+      if (!isOpen) {
+        if (event.key === "ArrowDown") {
+          debouncedAutoSuggest();
+        }
+        if (event.key === "Enter") {
+          performSearch();
+        }
+        return;
+      }
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        updateActiveSuggestion(1);
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        updateActiveSuggestion(-1);
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+
+        if (activeSuggestionIndex >= 0) {
+          selectSuggestion(activeSuggestionIndex);
+        } else {
+          closeDropdown();
+          performSearch();
+        }
+      } else if (event.key === "Escape") {
+        closeDropdown();
+      }
+    });
+
+    document.addEventListener("click", function (event) {
+      if (!event.target.closest(".search-field")) {
+        closeDropdown();
+      }
+    });
+
+    async function fetchAllFeatures(url, max = 1000) {
+      let allFeatures = [];
+      let offset = 0;
+      let done = false;
+
+      while (!done) {
+        const requestUrl = url + "&resultOffset=" + offset + "&resultRecordCount=" + max;
+        const response = await fetch(requestUrl);
+
+        if (!response.ok) {
+          throw new Error("HTTP " + response.status + " while loading " + requestUrl);
         }
 
-        // For address search, we don't need extensive sorting or color coding per segment if only one is found
-        // If multiple segments match an address, they are likely part of the same road, but let's assign a color
-        // just in case and to prepare for future enhancements.
+        const data = await response.json();
 
-        matchedSegments.forEach((seg, index) => {
-            seg.displayColor = roadColors[index % roadColors.length];
-        });
-
-        resultsDiv.innerHTML = `<h4 class="mb-3 text-center">Results for ${query}</h4>` + matchedSegments.map(r => {
-            const a = r.attributes;
-            const parityLeft = calculateParity(a.F_ADDR_L_911);
-            const parityRight = calculateParity(a.F_ADDR_R_911);
-            const segmentColor = r.displayColor; // Use the assigned color
-            return `
-                <div class="card mb-3 shadow-sm" style="border-left: 6px solid ${segmentColor};">
-                <div class="card-body">
-                    <h5 class="card-title" style="color: ${segmentColor};">${a.NAME_FULL || 'Unknown Street'} (ID: ${a.OBJECTID})</h5>
-                    <p class="card-text mb-1"><strong>Civic Address Point Location:</strong> ${address.attributes.Location || 'N/A'}</p>
-                    <hr>
-                    <div class="row">
-                        <div class="col-md-6 mb-3 mb-md-0">
-                            <div class="d-flex align-items-center mb-1">
-                                <span class="toggle-arrow" onclick="toggleAddressList(${a.OBJECTID}, 'L', this)">▶</span>
-                                <h6>Left Side Address Range</h6>
-                            </div>
-                            <p class="mb-1 ms-4">From: <strong>${a.F_ADDR_L_911 ?? 'N/A'}</strong></p>
-                            <p class="mb-1 ms-4">To: <strong>${a.T_ADDR_L_911 ?? 'N/A'}</strong></p>
-                            <p class="mb-0 ms-4">Calculated Parity: <span class="badge ${parityLeft === 'Even' ? 'bg-success' : parityLeft === 'Odd' ? 'bg-warning text-dark' : 'bg-secondary'}">${parityLeft}</span></p>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-center mb-1">
-                                <span class="toggle-arrow" onclick="toggleAddressList(${a.OBJECTID}, 'R', this)">▶</span>
-                                <h6>Right Side Address Range</h6>
-                            </div>
-                            <p class="mb-1 ms-4">From: <strong>${a.F_ADDR_R_911 ?? 'N/A'}</strong></p>
-                            <p class="mb-1 ms-4">To: <strong>${a.T_ADDR_R_911 ?? 'N/A'}</strong></p>
-                            <p class="mb-0 ms-4">Calculated Parity: <span class="badge ${parityRight === 'Even' ? 'bg-success' : parityRight === 'Odd' ? 'bg-warning text-dark' : 'bg-secondary'}">${parityRight}</span></p>
-                        </div>
-                    </div>
-                    <hr>
-                    <p class="mb-0 text-end"><small class="text-muted">Segment Parity (Field): <span class="badge bg-secondary">${a.PARITY || 'N/A'}</span></small></p>
-                </div>
-                </div>
-            `;
-        }).join('');
-        showMap(address, matchedSegments);
-
-      } else { 
-        // Road name only search
-        let matchingRoads = roads.filter(road => { // Use let because we'll reassign after sorting
-          const a = road.attributes;
-          return a.NAME_FULL?.toUpperCase().includes(streetName);
-        });
-
-        if (!matchingRoads.length) {
-          resultsDiv.innerHTML = '<p class="text-warning text-center">No road segments found with that name.</p>';
-          return;
+        if (data.error) {
+          throw new Error(data.error.message || "ArcGIS error");
         }
-        // Sort the matching roads by the lowest address range (F_ADDR_L_911 primarily)
-        matchingRoads.sort((a, b) => { 
-            const valA = a.attributes.F_ADDR_L_911 ?? (a.attributes.F_ADDR_R_911 ?? Infinity); // Use R if L is null, default to Infinity
-            const valB = b.attributes.F_ADDR_L_911 ?? (b.attributes.F_ADDR_R_911 ?? Infinity);
-            // Handle cases where both are null/NaN, or one is
-            if (valA === Infinity && valB === Infinity) return 0; // Both are effectively "N/A"
-            if (valA === Infinity) return 1; // A is "N/A", push to end
-            if (valB === Infinity) return -1; // B is "N/A", push to end
-            return valA - valB;
+
+        const validFeatures = (data.features || []).filter(function (feature) {
+          return feature && feature.attributes;
         });
 
-        // Assign colors based on sorted order
-        matchingRoads.forEach((seg, index) => {
-            seg.displayColor = roadColors[index % roadColors.length];
-        });
-        
-        // Group roads by name for a cleaner display if multiple segments exist (though sorted within name)
-        const groupedRoads = matchingRoads.reduce((acc, road) => {
-            const name = road.attributes.NAME_FULL || 'Unknown Road';
-            if (!acc[name]) acc[name] = [];
-            acc[name].push(road);
-            return acc;
-        }, {});
+        allFeatures = allFeatures.concat(validFeatures);
 
-        resultsDiv.innerHTML = `<h4 class="mb-3 text-center">Results for "${query}"</h4>` + Object.keys(groupedRoads).map(roadNameKey => {
-            const segments = groupedRoads[roadNameKey];
-            return `
-                <div class="card mb-3 shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">${roadNameKey}</h5>
-                        ${segments.map(seg => {
-                            const a = seg.attributes;
-                            const parityLeft = calculateParity(a.F_ADDR_L_911);
-                            const parityRight = calculateParity(a.F_ADDR_R_911);
-                            const segmentColor = seg.displayColor; // Use the assigned color
-                            return `
-                                <div class="mb-3 p-3 bg-light rounded" style="border-left: 5px solid ${segmentColor};">
-                                    <h6 style="color: ${segmentColor};">Segment Details (ID: ${a.OBJECTID})</h6>
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3 mb-md-0">
-                                            <div class="d-flex align-items-center mb-1">
-                                                <span class="toggle-arrow" onclick="toggleAddressList(${a.OBJECTID}, 'L', this)">▶</span>
-                                                <h6>Left Side Range</h6>
-                                            </div>
-                                            <p class="mb-1 ms-4">From: <strong>${a.F_ADDR_L_911 ?? 'N/A'}</strong></p>
-                                            <p class="mb-1 ms-4">To: <strong>${a.T_ADDR_L_911 ?? 'N/A'}</strong></p>
-                                            <p class="mb-0 ms-4">Calculated Parity: <span class="badge ${parityLeft === 'Even' ? 'bg-success' : parityLeft === 'Odd' ? 'bg-warning text-dark' : 'bg-secondary'}">${parityLeft}</span></p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="d-flex align-items-center mb-1">
-                                                <span class="toggle-arrow" onclick="toggleAddressList(${a.OBJECTID}, 'R', this)">▶</span>
-                                                <h6>Right Side Range</h6>
-                                            </div>
-                                            <p class="mb-1 ms-4">From: <strong>${a.F_ADDR_R_911 ?? 'N/A'}</strong></p>
-                                            <p class="mb-1 ms-4">To: <strong>${a.T_ADDR_R_911 ?? 'N/A'}</strong></p>
-                                            <p class="mb-0 ms-4">Calculated Parity: <span class="badge ${parityRight === 'Even' ? 'bg-success' : parityRight === 'Odd' ? 'bg-warning text-dark' : 'bg-secondary'}">${parityRight}</span></p>
-                                        </div>
-                                    </div>
-                                    <p class="mt-2 mb-0 text-end"><small class="text-muted">Segment Parity (Field): <span class="badge bg-secondary">${a.PARITY || 'N/A'}</span></small></p>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-            `;
-        }).join('');
-        showMap(null, matchingRoads); // Pass the sorted and color-assigned roads to showMap
+        if (!data.exceededTransferLimit) {
+          done = true;
+        } else {
+          offset += max;
+        }
+      }
+
+      return allFeatures;
+    }
+
+    async function loadData() {
+      initMap();
+
+      setStatus("muted", "Loading spatial data...");
+
+      const roadUrl =
+        "https://services2.arcgis.com/vJlmDE1PmdTcJF0N/arcgis/rest/services/Frontenac_Road_Nework_View/FeatureServer/0/query?where=1%3D1&outFields=*&f=json";
+
+      const civicUrl =
+        "https://services2.arcgis.com/vJlmDE1PmdTcJF0N/arcgis/rest/services/Civic_Address_Points_View_2/FeatureServer/0/query?where=1%3D1&outFields=*&f=json";
+
+      try {
+        roads = await fetchAllFeatures(roadUrl);
+        civicAddresses = await fetchAllFeatures(civicUrl);
+
+        console.log("Road segments loaded:", roads.length);
+        console.log("Civic addresses loaded:", civicAddresses.length);
+
+        let html =
+          "Loaded " +
+          roads.length +
+          " road segments and " +
+          civicAddresses.length +
+          " civic addresses.";
+
+        setStatus("success", html);
+
+        if (!roads.length) {
+          setStatus("warning", "Warning: the road layer returned zero features.");
+        }
+
+        if (!civicAddresses.length) {
+          setStatus("warning", "Warning: the civic address layer returned zero features.");
+        }
+      } catch (error) {
+        console.error("Error loading data:", error);
+        setStatus("error", "Failed to load data. " + escapeHtml(error.message));
       }
     }
 
-    function showMap(address, roadSegments) {
-      const mapDiv = document.getElementById('map');
-      mapDiv.style.display = 'block';
-
-      if (map) {
-        // Clear temporary civic markers if map is being re-initialized
-        // though ideally tempCivicMarkersGroup is globally managed and just cleared
-        map.remove();
-      }
-      map = L.map('map').setView([44.3, -76.4], 10);
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      }).addTo(map);
-
-      // Initialize or re-add the temporary markers group to the new map instance
-      if (tempCivicMarkersGroup && map.hasLayer(tempCivicMarkersGroup)) {
-          tempCivicMarkersGroup.clearLayers(); // Clear old markers if any
-      } else {
-          tempCivicMarkersGroup = L.featureGroup().addTo(map);
+    function setStatus(type, html) {
+      if (!html) {
+        statusEl.innerHTML = "";
+        return;
       }
 
+      statusEl.innerHTML = '<p class="message ' + type + '">' + html + "</p>";
+    }
 
-      const featuresGroup = L.featureGroup().addTo(map); // For road segments and main address
+    function calculateParity(num) {
+      const value = parseInt(num, 10);
 
-      if (address && address.geometry && address.geometry.x != null && address.geometry.y != null) {
-        // (same logic for main address marker)
-        const [lon, lat] = reprojectCoord(address.geometry.x, address.geometry.y);
-        if (!isNaN(lat) && !isNaN(lon)) {
-            L.marker([lat, lon])
-              .bindPopup(`<b>Civic Address</b><br>${address.attributes.Location || 'N/A'}`)
-              .openPopup()
-              .addTo(featuresGroup);
-        } else {
-            console.warn("Skipping address marker due to reprojection error.", address.geometry);
-        }
+      if (!Number.isFinite(value)) {
+        return "N/A";
       }
 
-      roadSegments.forEach((seg) => { /* (same logic for road segment polylines)  */ 
-        const geom = seg.geometry;
-        const segmentColor = seg.displayColor || '#0d6efd';
-        if (geom && geom.paths && geom.paths.length) {
-          geom.paths.forEach((path) => {
-            const latlngs = path.map(pt => {
-              const [lon, lat] = reprojectCoord(pt[0], pt[1]);
-              return (isNaN(lat) || isNaN(lon)) ? null : [lat, lon];
-            }).filter(p => p !== null);
+      return value % 2 === 0 ? "Even" : "Odd";
+    }
 
-            if (latlngs.length > 0) {
-              L.polyline(latlngs, { color: segmentColor, weight: 5, opacity: 0.8, dashArray: '5, 5' })
-                .bindPopup(`<b>Segment:</b> ${seg.attributes.NAME_FULL || 'Unknown'}<br>L: ${seg.attributes.F_ADDR_L_911 ?? 'N/A'}-${seg.attributes.T_ADDR_L_911 ?? 'N/A'}<br>R: ${seg.attributes.F_ADDR_R_911 ?? 'N/A'}-${seg.attributes.T_ADDR_R_911 ?? 'N/A'}`)
-                .addTo(featuresGroup);
-            }
-          });
+    function inAddressRange(number, fromValue, toValue) {
+      const from = parseInt(fromValue, 10);
+      const to = parseInt(toValue, 10);
+
+      if (!Number.isFinite(from) || !Number.isFinite(to)) {
+        return false;
+      }
+
+      return number >= Math.min(from, to) && number <= Math.max(from, to);
+    }
+
+    function reprojectCoord(x, y) {
+      try {
+        return proj4(NAD83_18N, WGS84, [x, y]);
+      } catch (error) {
+        return [NaN, NaN];
+      }
+    }
+
+    function formatRange(fromValue, toValue) {
+      const from = parseInt(fromValue, 10);
+      const to = parseInt(toValue, 10);
+
+      if (!Number.isFinite(from) && !Number.isFinite(to)) {
+        return "no range";
+      }
+
+      if (!Number.isFinite(from)) {
+        return String(to);
+      }
+
+      if (!Number.isFinite(to)) {
+        return String(from);
+      }
+
+      if (from === to) {
+        return String(from);
+      }
+
+      return from + " to " + to;
+    }
+
+    function firstAddressValue(road) {
+      const attributes = road?.attributes;
+
+      if (!attributes) {
+        return Infinity;
+      }
+
+      const left = parseInt(attributes.F_ADDR_L_911, 10);
+      if (Number.isFinite(left)) {
+        return left;
+      }
+
+      const right = parseInt(attributes.F_ADDR_R_911, 10);
+      if (Number.isFinite(right)) {
+        return right;
+      }
+
+      return Infinity;
+    }
+
+    function getAddressesForSegmentSide(segmentAttributes, streetName, side) {
+      const relevant = [];
+
+      if (!segmentAttributes || !streetName) {
+        return relevant;
+      }
+
+      const segmentStreetName = normalize(streetName);
+
+      const fromAddr = side === "L" ? segmentAttributes.F_ADDR_L_911 : segmentAttributes.F_ADDR_R_911;
+      const toAddr = side === "L" ? segmentAttributes.T_ADDR_L_911 : segmentAttributes.T_ADDR_R_911;
+      const startNum = side === "L" ? segmentAttributes.F_ADDR_L_911 : segmentAttributes.F_ADDR_R_911;
+
+      if (fromAddr == null || toAddr == null || startNum == null) {
+        return relevant;
+      }
+
+      const expectedParity = calculateParity(startNum);
+
+      if (expectedParity === "N/A") {
+        return relevant;
+      }
+
+      const minAddr = Math.min(parseInt(fromAddr, 10), parseInt(toAddr, 10));
+      const maxAddr = Math.max(parseInt(fromAddr, 10), parseInt(toAddr, 10));
+
+      civicAddresses.forEach(function (address) {
+        const attributes = address?.attributes;
+
+        if (!attributes) return;
+
+        const civicStreetName = normalize(attributes.StreetName);
+
+        if (civicStreetName !== segmentStreetName) return;
+
+        const civicNumber = parseInt(attributes.StreetNumber, 10);
+
+        if (!Number.isFinite(civicNumber)) return;
+
+        if (civicNumber >= minAddr && civicNumber <= maxAddr && calculateParity(civicNumber) === expectedParity) {
+          relevant.push(address);
         }
       });
 
-      if (featuresGroup.getLayers().length > 0) { /* (same logic for fitting bounds)  */ 
-        try {
-          const bounds = featuresGroup.getBounds();
-          if (bounds.isValid()) {
-            map.fitBounds(bounds.pad(0.2));
-          } else { map.setView([44.3, -76.4], 10); }
-        } catch (e) {
-          console.error("Error fitting bounds:", e);
-          map.setView([44.3, -76.4], 10);
+      relevant.sort(function (a, b) {
+        return (parseInt(a.attributes.StreetNumber, 10) || 0) - (parseInt(b.attributes.StreetNumber, 10) || 0);
+      });
+
+      return relevant;
+    }
+
+    function detectSide(segment, streetNumber) {
+      const attributes = segment?.attributes;
+
+      if (!attributes) {
+        return "L";
+      }
+
+      const parity = calculateParity(streetNumber);
+
+      const inLeft =
+        inAddressRange(streetNumber, attributes.F_ADDR_L_911, attributes.T_ADDR_L_911) &&
+        parity === calculateParity(attributes.F_ADDR_L_911);
+
+      if (inLeft) {
+        return "L";
+      }
+
+      const inRight =
+        inAddressRange(streetNumber, attributes.F_ADDR_R_911, attributes.T_ADDR_R_911) &&
+        parity === calculateParity(attributes.F_ADDR_R_911);
+
+      if (inRight) {
+        return "R";
+      }
+
+      return "L";
+    }
+
+    function clearResultsUI() {
+      currentMatchingSegments = [];
+      currentAddress = null;
+      selectedSegment = null;
+      selectedSide = null;
+      segmentLayers = {};
+
+      summaryEl.hidden = true;
+      detailEl.hidden = true;
+      segmentListEl.hidden = true;
+
+      summaryEl.innerHTML = "";
+      detailEl.innerHTML = "";
+      segmentListEl.innerHTML = "";
+
+      if (civicLayerGroup) {
+        civicLayerGroup.clearLayers();
+      }
+    }
+
+    function performSearch() {
+      closeDropdown();
+
+      const rawQuery = searchInput.value.trim();
+
+      clearResultsUI();
+
+      if (!rawQuery) {
+        setStatus("error", "Please enter a road name or full address.");
+        showSearchLayers(null, []);
+        return;
+      }
+
+      const query = normalize(rawQuery);
+      const isAddress = /^\d+\s+.+/.test(query);
+
+      if (isAddress) {
+        const parts = query.match(/^(\d+)\s+(.*)$/);
+        const streetNumber = parseInt(parts[1], 10);
+        const streetName = normalize(parts[2]);
+
+        const address = civicAddresses.find(function (item) {
+          const attributes = item?.attributes;
+
+          if (!attributes) return false;
+
+          return (
+            Number(attributes.StreetNumber) === streetNumber &&
+            normalize(attributes.StreetName) === streetName
+          );
+        });
+
+        if (!address) {
+          setStatus("warning", "No matching civic address found. Try searching by road name only.");
+          showSearchLayers(null, []);
+          return;
         }
-      } else if (!tempCivicMarkersGroup || tempCivicMarkersGroup.getLayers().length === 0) {
-         // Only set default view if no main features AND no temp civic markers are present
+
+        currentAddress = address;
+
+        const streetParity = calculateParity(streetNumber);
+
+        const matchedSegments = roads.filter(function (road) {
+          const attributes = road?.attributes;
+
+          if (!attributes) return false;
+
+          if (normalize(attributes.NAME_FULL) !== streetName) {
+            return false;
+          }
+
+          const inLeft =
+            inAddressRange(streetNumber, attributes.F_ADDR_L_911, attributes.T_ADDR_L_911) &&
+            streetParity === calculateParity(attributes.F_ADDR_L_911);
+
+          const inRight =
+            inAddressRange(streetNumber, attributes.F_ADDR_R_911, attributes.T_ADDR_R_911) &&
+            streetParity === calculateParity(attributes.F_ADDR_R_911);
+
+          return inLeft || inRight;
+        });
+
+        if (!matchedSegments.length) {
+          currentMatchingSegments = [];
+          setStatus("warning", "Address point found, but no matching road segment for " + escapeHtml(rawQuery) + ".");
+          renderResultsUI();
+          showSearchLayers(address, []);
+          return;
+        }
+
+        currentMatchingSegments = matchedSegments.sort(function (a, b) {
+          return firstAddressValue(a) - firstAddressValue(b);
+        });
+
+        selectedSegment = currentMatchingSegments[0];
+        selectedSide = detectSide(selectedSegment, streetNumber);
+
+        setStatus("", "");
+        renderResultsUI();
+        showSearchLayers(address, currentMatchingSegments);
+        highlightSelectedSegment();
+        loadSelectedSideAddresses();
+        focusSelection();
+        return;
+      }
+
+      const tokens = query.split(" ").filter(Boolean);
+
+      let matchingRoads = roads.filter(function (road) {
+        const name = normalize(road?.attributes?.NAME_FULL);
+
+        if (!name) return false;
+
+        return name.includes(query) || tokens.every(function (token) {
+          return name.includes(token);
+        });
+      });
+
+      if (!matchingRoads.length) {
+        setStatus("warning", "No road segments found for " + escapeHtml(rawQuery) + ".");
+        showSearchLayers(null, []);
+        return;
+      }
+
+      currentMatchingSegments = matchingRoads.sort(function (a, b) {
+        return firstAddressValue(a) - firstAddressValue(b);
+      });
+
+      selectedSegment = currentMatchingSegments[0] || null;
+      selectedSide = null;
+
+      setStatus("", "");
+      renderResultsUI();
+      showSearchLayers(null, currentMatchingSegments);
+      highlightSelectedSegment();
+    }
+
+    function renderResultsUI() {
+      renderSummary();
+      renderSegmentList();
+      renderDetailPanel();
+    }
+
+    function renderSummary() {
+      if (!currentMatchingSegments.length && !currentAddress) {
+        summaryEl.hidden = true;
+        summaryEl.innerHTML = "";
+        return;
+      }
+
+      summaryEl.hidden = false;
+
+      let title = "";
+      let subtitle = "";
+
+      if (currentAddress) {
+        title = currentAddress.attributes.StreetNumber + " " + (currentAddress.attributes.StreetName || "");
+        subtitle = currentMatchingSegments.length
+          ? currentMatchingSegments.length + " matching segment" + (currentMatchingSegments.length === 1 ? "" : "s")
+          : "No matching road segment";
+      } else {
+        const uniqueNames = new Set(
+          currentMatchingSegments.map(function (segment) {
+            return normalize(segment?.attributes?.NAME_FULL);
+          })
+        );
+
+        title = uniqueNames.size === 1
+          ? currentMatchingSegments[0].attributes.NAME_FULL || "Unknown road"
+          : uniqueNames.size + " roads";
+
+        subtitle = currentMatchingSegments.length + " segment" + (currentMatchingSegments.length === 1 ? "" : "s");
+      }
+
+      summaryEl.innerHTML =
+        "<div>" +
+        '<div class="summary-title">' + escapeHtml(title) + "</div>" +
+        '<div class="summary-subtitle">' + escapeHtml(subtitle) + "</div>" +
+        "</div>" +
+        "<div>" +
+        '<button class="mini-btn" type="button" onclick="fitAllResults()">Fit map</button>' +
+        "</div>";
+    }
+
+    function renderSegmentList() {
+      if (!currentMatchingSegments.length) {
+        segmentListEl.hidden = true;
+        segmentListEl.innerHTML = "";
+        return;
+      }
+
+      segmentListEl.hidden = false;
+
+      const scrollTop = segmentListEl.scrollTop;
+
+      segmentListEl.innerHTML = currentMatchingSegments
+        .map(function (segment) {
+          const attributes = segment.attributes;
+          const id = String(attributes.OBJECTID);
+          const isSelected = selectedSegment && String(selectedSegment.attributes.OBJECTID) === id;
+
+          const leftRange = formatRange(attributes.F_ADDR_L_911, attributes.T_ADDR_L_911);
+          const rightRange = formatRange(attributes.F_ADDR_R_911, attributes.T_ADDR_R_911);
+          const leftParity = calculateParity(attributes.F_ADDR_L_911);
+          const rightParity = calculateParity(attributes.F_ADDR_R_911);
+
+          return (
+            '<div class="segment-row ' + (isSelected ? "active" : "") + '" data-id="' + escapeHtml(id) + '" role="button" tabindex="0">' +
+            '<div class="segment-row-main">' +
+            '<div class="segment-row-title">' + escapeHtml(attributes.NAME_FULL || "Unknown road") + "</div>" +
+            '<div class="segment-row-ranges">' +
+            '<span class="range-chip" title="Left range, parity ' + escapeHtml(leftParity) + '">L ' + escapeHtml(leftRange) + "</span>" +
+            '<span class="range-chip" title="Right range, parity ' + escapeHtml(rightParity) + '">R ' + escapeHtml(rightRange) + "</span>" +
+            "</div>" +
+            "</div>" +
+            '<div class="segment-row-actions">' +
+            '<button type="button" class="mini-btn ' + (isSelected && selectedSide === "L" ? "active" : "") + '" data-side="L">Left</button>' +
+            '<button type="button" class="mini-btn ' + (isSelected && selectedSide === "R" ? "active" : "") + '" data-side="R">Right</button>' +
+            "</div>" +
+            "</div>"
+          );
+        })
+        .join("");
+
+      segmentListEl.scrollTop = scrollTop;
+    }
+
+    segmentListEl.addEventListener("click", function (event) {
+      const row = event.target.closest(".segment-row");
+
+      if (!row) return;
+
+      const id = row.dataset.id;
+      const sideButton = event.target.closest("[data-side]");
+      const side = sideButton ? sideButton.dataset.side : null;
+
+      selectSegment(id, side, true);
+    });
+
+    segmentListEl.addEventListener("keydown", function (event) {
+      if (event.key !== "Enter" && event.key !== " ") return;
+
+      const row = event.target.closest(".segment-row");
+
+      if (!row) return;
+
+      event.preventDefault();
+      selectSegment(row.dataset.id, null, true);
+    });
+
+    function renderDetailPanel() {
+      if (!selectedSegment) {
+        detailEl.hidden = true;
+        detailEl.innerHTML = "";
+        return;
+      }
+
+      detailEl.hidden = false;
+
+      const attributes = selectedSegment.attributes;
+      const id = String(attributes.OBJECTID);
+
+      const leftRange = formatRange(attributes.F_ADDR_L_911, attributes.T_ADDR_L_911);
+      const rightRange = formatRange(attributes.F_ADDR_R_911, attributes.T_ADDR_R_911);
+      const leftParity = calculateParity(attributes.F_ADDR_L_911);
+      const rightParity = calculateParity(attributes.F_ADDR_R_911);
+
+      detailEl.innerHTML =
+        '<div class="detail-header">' +
+        "<div>" +
+        '<div class="detail-title">' + escapeHtml(attributes.NAME_FULL || "Unknown road") + "</div>" +
+        '<div class="detail-subtitle">Segment ' + escapeHtml(id) + "</div>" +
+        "</div>" +
+        '<button class="mini-btn" type="button" onclick="clearSelection()">Clear</button>' +
+        "</div>" +
+        '<div class="detail-meta">' +
+        "<div><strong>Left range</strong><br>" + escapeHtml(leftRange) + " · " + escapeHtml(leftParity) + "</div>" +
+        "<div><strong>Right range</strong><br>" + escapeHtml(rightRange) + " · " + escapeHtml(rightParity) + "</div>" +
+        "</div>" +
+        '<div class="detail-tabs">' +
+        '<button type="button" class="tab ' + (selectedSide === "L" ? "active" : "") + '" onclick="selectSelectedSide(\'L\')">Left</button>' +
+        '<button type="button" class="tab ' + (selectedSide === "R" ? "active" : "") + '" onclick="selectSelectedSide(\'R\')">Right</button>' +
+        "</div>" +
+        '<div id="detail-address-list" class="detail-address-list">' +
+        (selectedSide
+          ? '<p class="message muted">Loading addresses...</p>'
+          : '<p class="message muted">Choose Left or Right to view addresses.</p>') +
+        "</div>";
+    }
+
+    function selectSelectedSide(side) {
+      if (!selectedSegment) return;
+
+      selectSegment(String(selectedSegment.attributes.OBJECTID), side, true);
+    }
+
+    function clearSelection() {
+      selectedSegment = null;
+      selectedSide = null;
+
+      if (civicLayerGroup) {
+        civicLayerGroup.clearLayers();
+      }
+
+      highlightSelectedSegment();
+      renderSegmentList();
+      renderDetailPanel();
+    }
+
+    function selectSegment(objectId, side, focusMap) {
+      const segment = currentMatchingSegments.find(function (item) {
+        return String(item?.attributes?.OBJECTID) === String(objectId);
+      });
+
+      if (!segment) return;
+
+      selectedSegment = segment;
+      selectedSide = side || null;
+
+      renderSegmentList();
+      renderDetailPanel();
+      highlightSelectedSegment();
+
+      if (selectedSide) {
+        loadSelectedSideAddresses();
+      } else {
+        if (civicLayerGroup) {
+          civicLayerGroup.clearLayers();
+        }
+      }
+
+      if (focusMap) {
+        focusSelection();
+      }
+    }
+
+    function loadSelectedSideAddresses() {
+      const listEl = document.getElementById("detail-address-list");
+
+      if (!listEl || !selectedSegment || !selectedSide) return;
+
+      listEl.innerHTML = '<p class="message muted">Loading addresses...</p>';
+
+      const addresses = getAddressesForSegmentSide(
+        selectedSegment.attributes,
+        selectedSegment.attributes.NAME_FULL,
+        selectedSide
+      );
+
+      if (civicLayerGroup) {
+        civicLayerGroup.clearLayers();
+      }
+
+      if (!addresses.length) {
+        listEl.innerHTML = '<p class="message muted">No matching addresses in this range.</p>';
+        focusSelection();
+        return;
+      }
+
+      listEl.innerHTML =
+        '<div class="detail-count">' + addresses.length + " addresses</div>" +
+        addresses
+          .map(function (address) {
+            const attributes = address.attributes;
+
+            return (
+              '<div class="address-item">' +
+              escapeHtml(attributes.StreetNumber + " " + (attributes.StreetName || "")) +
+              ' <span style="color: var(--text-muted);">(' +
+              escapeHtml(attributes.Location || "N/A") +
+              ")</span></div>"
+            );
+          })
+          .join("");
+
+      addresses.forEach(function (address) {
+        if (address.geometry && address.geometry.x != null && address.geometry.y != null) {
+          const coords = reprojectCoord(address.geometry.x, address.geometry.y);
+          const lon = coords[0];
+          const lat = coords[1];
+
+          if (!isNaN(lat) && !isNaN(lon)) {
+            L.marker([lat, lon], {
+              icon: L.divIcon({
+                className: "custom-civic-marker",
+                html: "C",
+                iconSize: [28, 28],
+                iconAnchor: [14, 14]
+              })
+            })
+              .bindPopup(
+                "<strong>Civic:</strong> " +
+                escapeHtml(address.attributes.StreetNumber + " " + (address.attributes.StreetName || ""))
+              )
+              .addTo(civicLayerGroup);
+          }
+        }
+      });
+
+      focusSelection();
+    }
+
+    function initMap() {
+      if (map) return;
+
+      map = L.map("map").setView([44.3, -76.4], 10);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(map);
+
+      roadLayerGroup = L.featureGroup().addTo(map);
+      civicLayerGroup = L.featureGroup().addTo(map);
+
+      window.addEventListener("resize", function () {
+        map.invalidateSize();
+      });
+    }
+
+    function showSearchLayers(address, segments) {
+      initMap();
+
+      roadLayerGroup.clearLayers();
+      civicLayerGroup.clearLayers();
+      segmentLayers = {};
+
+      if (address) {
+        addAddressMarker(address);
+      }
+
+      segments.forEach(function (segment) {
+        addSegmentLayer(segment);
+      });
+
+      if (segments.length || address) {
+        fitAllResults();
+      } else {
+        map.setView([44.3, -76.4], 10);
+      }
+
+      highlightSelectedSegment();
+
+      requestAnimationFrame(function () {
+        map.invalidateSize();
+      });
+    }
+
+    function addAddressMarker(address) {
+      if (!address.geometry || address.geometry.x == null || address.geometry.y == null) return;
+
+      const coords = reprojectCoord(address.geometry.x, address.geometry.y);
+      const lon = coords[0];
+      const lat = coords[1];
+
+      if (isNaN(lat) || isNaN(lon)) return;
+
+      L.marker([lat, lon])
+        .bindPopup(
+          "<strong>Civic Address</strong><br>" +
+          escapeHtml(address.attributes.Location || "N/A")
+        )
+        .addTo(roadLayerGroup);
+    }
+
+    function addSegmentLayer(segment) {
+      const attributes = segment?.attributes;
+      const geometry = segment?.geometry;
+
+      if (!attributes || !geometry || !geometry.paths || !geometry.paths.length) return;
+
+      const id = String(attributes.OBJECTID);
+      const layer = L.featureGroup();
+      let hasGeometry = false;
+
+      geometry.paths.forEach(function (path) {
+        const latlngs = path
+          .map(function (point) {
+            const coords = reprojectCoord(point[0], point[1]);
+            const lon = coords[0];
+            const lat = coords[1];
+
+            if (isNaN(lat) || isNaN(lon)) {
+              return null;
+            }
+
+            return [lat, lon];
+          })
+          .filter(function (point) {
+            return point !== null;
+          });
+
+        if (!latlngs.length) return;
+
+        hasGeometry = true;
+
+        L.polyline(latlngs, {
+          color: "#064e3b",
+          weight: 4,
+          opacity: 0.65
+        }).addTo(layer);
+      });
+
+      if (!hasGeometry) return;
+
+      const leftRange = formatRange(attributes.F_ADDR_L_911, attributes.T_ADDR_L_911);
+      const rightRange = formatRange(attributes.F_ADDR_R_911, attributes.T_ADDR_R_911);
+
+      layer.bindPopup(
+        "<strong>" + escapeHtml(attributes.NAME_FULL || "Unknown road") + "</strong><br>" +
+        "Left: " + escapeHtml(leftRange) + "<br>" +
+        "Right: " + escapeHtml(rightRange)
+      );
+
+      layer.on("click", function () {
+        selectSegment(id, null, true);
+      });
+
+      layer.addTo(roadLayerGroup);
+      segmentLayers[id] = layer;
+    }
+
+    function highlightSelectedSegment() {
+      if (!map) return;
+
+      Object.entries(segmentLayers).forEach(function (entry) {
+        const id = entry[0];
+        const layer = entry[1];
+
+        const isSelected = selectedSegment && String(selectedSegment.attributes.OBJECTID) === id;
+
+        const style = {
+          color: isSelected ? "#10b981" : "#064e3b",
+          weight: isSelected ? 7 : 4,
+          opacity: isSelected ? 1 : 0.65
+        };
+
+        if (typeof layer.setStyle === "function") {
+          layer.setStyle(style);
+        } else if (typeof layer.eachLayer === "function") {
+          layer.eachLayer(function (child) {
+            child.setStyle(style);
+          });
+        }
+
+        if (isSelected && typeof layer.bringToFront === "function") {
+          layer.bringToFront();
+        }
+      });
+    }
+
+    function fitAllResults() {
+      if (!map) return;
+
+      const layers = [];
+
+      if (roadLayerGroup && roadLayerGroup.getLayers().length) {
+        layers.push(roadLayerGroup);
+      }
+
+      if (!layers.length) {
+        map.setView([44.3, -76.4], 10);
+        return;
+      }
+
+      try {
+        map.fitBounds(L.featureGroup(layers).getBounds().pad(0.2));
+      } catch (error) {
         map.setView([44.3, -76.4], 10);
       }
     }
-    window.onload = loadData;
+
+    function focusSelection() {
+      if (!map) return;
+
+      const layers = [];
+
+      if (selectedSegment) {
+        const selectedLayer = segmentLayers[String(selectedSegment.attributes.OBJECTID)];
+
+        if (selectedLayer) {
+          layers.push(selectedLayer);
+        }
+      }
+
+      if (civicLayerGroup && civicLayerGroup.getLayers().length) {
+        layers.push(civicLayerGroup);
+      }
+
+      if (!layers.length) {
+        fitAllResults();
+        return;
+      }
+
+      try {
+        map.fitBounds(L.featureGroup(layers).getBounds().pad(0.25));
+      } catch (error) {
+        map.setView([44.3, -76.4], 10);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadData);
   </script>
 </body>
 </html>
