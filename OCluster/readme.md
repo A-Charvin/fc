@@ -73,8 +73,6 @@ python crawler.py
 
 ```
 
-*This will now generate both `content_audit_graph.json` (for the Galaxy) and `dependency_network.gml` (for external analysis).*
-
 ---
 
 ### 2. Launch the Visualization
@@ -130,13 +128,7 @@ Upload `index.html` and `content_graph.json` to any web server (IIS, GitHub Page
 
 ## Data Exports
 
-The crawler now generates two distinct output files to support different workflows:
-
 1. **`content_audit_graph.json`**: Optimized for the Web Galaxy frontend. Includes UI-specific metadata like node colors, blast radius metrics, and orbital positions.
-2. **`dependency_network.gml`**: A standardized XML-based geography file. This allows you to import the portal's dependency "geography" into:
-* **Gephi**: For advanced network topology analysis.
-* **ArcGIS Pro / QGIS**: To treat the dependency graph as a formal spatial layer.
-* **NetworkX**: For programmatic graph theory calculations in Python.
 
 ---
 
@@ -162,5 +154,4 @@ The core of this project is built upon the official ArcGIS API for Python and D3
 ### Graph Theory & Visualization
 
 * **[D3.js Force-Directed Graphs](https://d3js.org/d3-force)** – Documentation for the physics engine powering the "Galaxy" movement and node collisions.
-* **[GML Format Specification](https://www.ogc.org/standards/gml/)** – Technical background on the Graph Modelling Language used for the `.gml` export.
 * **[ArcGIS Portal API: Item Data](https://developers.arcgis.com/rest/users-groups-and-items/item-data.htm)** – Reference for the internal JSON structures we parse to find "hidden" dependencies like layer IDs inside Web Map specs.
